@@ -1,3 +1,21 @@
+import type {
+  Appointment,
+  AppointmentCreate,
+  AppointmentReschedule,
+  AppointmentStats,
+  CallLog,
+  CallStats,
+  DashboardStats,
+  Doctor,
+  DoctorAvailability,
+  Notification,
+  Patient,
+  PatientCreate,
+  TokenResponse,
+  Transcript,
+  User,
+} from "./types";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const API_V1 = `${API_BASE}/api/v1`;
 
@@ -57,24 +75,24 @@ export async function login(email: string, password: string) {
     const error = await res.json().catch(() => ({ detail: "Login failed" }));
     throw new Error(error.detail);
   }
-  return res.json();
+  return res.json() as Promise<TokenResponse>;
 }
 
 export function getMe() {
-  return request<any>("/auth/me");
+  return request<User>("/auth/me");
 }
 
 // ── Dashboard ───────────────────────────────────────
 export function getDashboardStats() {
-  return request<any>("/dashboard/stats");
+  return request<DashboardStats>("/dashboard/stats");
 }
 
 export function getRecentAppointments(limit = 10) {
-  return request<any[]>(`/dashboard/recent-appointments?limit=${limit}`);
+  return request<Appointment[]>(`/dashboard/recent-appointments?limit=${limit}`);
 }
 
 export function getRecentCalls(limit = 10) {
-  return request<any[]>(`/dashboard/recent-calls?limit=${limit}`);
+  return request<CallLog[]>(`/dashboard/recent-calls?limit=${limit}`);
 }
 
 // ── Patients ────────────────────────────────────────
@@ -83,34 +101,34 @@ export function getPatients(params?: { skip?: number; limit?: number; search?: s
   if (params?.skip) query.set("skip", String(params.skip));
   if (params?.limit) query.set("limit", String(params.limit));
   if (params?.search) query.set("search", params.search);
-  return request<any[]>(`/patients/?${query}`);
+  return request<Patient[]>(`/patients/?${query}`);
 }
 
 export function getPatient(patientId: string) {
-  return request<any>(`/patients/${patientId}`);
+  return request<Patient>(`/patients/${patientId}`);
 }
 
-export function createPatient(data: any) {
-  return request<any>("/patients/", { method: "POST", body: JSON.stringify(data) });
+export function createPatient(data: PatientCreate) {
+  return request<Patient>("/patients/", { method: "POST", body: JSON.stringify(data) });
 }
 
-export function updatePatient(patientId: string, data: any) {
-  return request<any>(`/patients/${patientId}`, { method: "PUT", body: JSON.stringify(data) });
+export function updatePatient(patientId: string, data: Partial<PatientCreate>) {
+  return request<Patient>(`/patients/${patientId}`, { method: "PUT", body: JSON.stringify(data) });
 }
 
 // ── Doctors ─────────────────────────────────────────
 export function getDoctors(params?: { specialization?: string }) {
   const query = new URLSearchParams();
   if (params?.specialization) query.set("specialization", params.specialization);
-  return request<any[]>(`/doctors/?${query}`);
+  return request<Doctor[]>(`/doctors/?${query}`);
 }
 
 export function getDoctor(employeeId: string) {
-  return request<any>(`/doctors/${employeeId}`);
+  return request<Doctor>(`/doctors/${employeeId}`);
 }
 
 export function checkDoctorAvailability(doctorId: string, date: string) {
-  return request<any>("/doctors/availability", {
+  return request<DoctorAvailability>("/doctors/availability", {
     method: "POST",
     body: JSON.stringify({ doctor_id: doctorId, date }),
   });
@@ -125,56 +143,56 @@ export function getAppointments(params?: {
   if (params?.date) query.set("date", params.date);
   if (params?.doctor_id) query.set("doctor_id", params.doctor_id);
   if (params?.patient_id) query.set("patient_id", params.patient_id);
-  return request<any[]>(`/appointments/?${query}`);
+  return request<Appointment[]>(`/appointments/?${query}`);
 }
 
-export function createAppointment(data: any) {
-  return request<any>("/appointments/", { method: "POST", body: JSON.stringify(data) });
+export function createAppointment(data: AppointmentCreate) {
+  return request<Appointment>("/appointments/", { method: "POST", body: JSON.stringify(data) });
 }
 
-export function rescheduleAppointment(id: string, data: any) {
-  return request<any>(`/appointments/${id}/reschedule`, { method: "PUT", body: JSON.stringify(data) });
+export function rescheduleAppointment(id: string, data: AppointmentReschedule) {
+  return request<Appointment>(`/appointments/${id}/reschedule`, { method: "PUT", body: JSON.stringify(data) });
 }
 
 export function cancelAppointment(id: string, reason?: string) {
   const query = reason ? `?reason=${encodeURIComponent(reason)}` : "";
-  return request<any>(`/appointments/${id}/cancel${query}`, { method: "PUT" });
+  return request<Appointment>(`/appointments/${id}/cancel${query}`, { method: "PUT" });
 }
 
 export function getAppointmentStats() {
-  return request<any>("/appointments/stats/summary");
+  return request<AppointmentStats>("/appointments/stats/summary");
 }
 
 // ── Calls ───────────────────────────────────────────
 export function getCallLogs(params?: { status?: string }) {
   const query = new URLSearchParams();
   if (params?.status) query.set("status", params.status);
-  return request<any[]>(`/calls/?${query}`);
+  return request<CallLog[]>(`/calls/?${query}`);
 }
 
 export function getCallLog(callId: string) {
-  return request<any>(`/calls/${callId}`);
+  return request<CallLog>(`/calls/${callId}`);
 }
 
 export function getCallTranscript(callId: string) {
-  return request<any>(`/calls/${callId}/transcript`);
+  return request<Transcript>(`/calls/${callId}/transcript`);
 }
 
 export function getCallStats() {
-  return request<any>("/calls/stats/summary");
+  return request<CallStats>("/calls/stats/summary");
 }
 
 // ── Notifications ───────────────────────────────────
 export function getNotifications(unreadOnly = false) {
-  return request<any[]>(`/notifications/?unread_only=${unreadOnly}`);
+  return request<Notification[]>(`/notifications/?unread_only=${unreadOnly}`);
 }
 
 export function markNotificationRead(id: string) {
-  return request<any>(`/notifications/${id}/read`, { method: "PUT" });
+  return request<{ status: string }>(`/notifications/${id}/read`, { method: "PUT" });
 }
 
 export function markAllNotificationsRead() {
-  return request<any>("/notifications/read-all", { method: "PUT" });
+  return request<{ status: string }>("/notifications/read-all", { method: "PUT" });
 }
 
 export function getUnreadCount() {

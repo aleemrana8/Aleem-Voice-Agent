@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # ─── MongoDB ───────────────────────────────────────
   mongodb:
@@ -45,10 +43,10 @@ services:
     env_file:
       - .env
     depends_on:
-      - mongodb
-      - livekit
-    volumes:
-      - ./backend:/app
+      mongodb:
+        condition: service_started
+      livekit:
+        condition: service_started
     networks:
       - aleem_network
 
@@ -64,11 +62,8 @@ services:
     env_file:
       - .env
     depends_on:
-      - backend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
+      backend:
+        condition: service_started
     networks:
       - aleem_network
 
