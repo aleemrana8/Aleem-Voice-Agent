@@ -22,7 +22,22 @@ def test_import_config():
 def test_import_models():
     """Verify all document models import cleanly."""
     from app.models import ALL_DOCUMENT_MODELS
-    assert len(ALL_DOCUMENT_MODELS) == 7
+    assert len(ALL_DOCUMENT_MODELS) == 8  # includes DoctorAvailability
+
+
+def test_import_enums():
+    """Verify all enums import and have correct values."""
+    from app.models.enums import (
+        UserRole, AppointmentStatus, CallStatus,
+        Gender, Speaker, NotificationType, BookingSource,
+    )
+    assert UserRole.ADMIN == "admin"
+    assert AppointmentStatus.SCHEDULED == "scheduled"
+    assert CallStatus.COMPLETED == "completed"
+    assert Gender.MALE == "male"
+    assert Speaker.AGENT == "agent"
+    assert NotificationType.SUCCESS == "success"
+    assert BookingSource.VOICE == "voice"
 
 
 def test_import_routes():

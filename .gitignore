@@ -35,8 +35,8 @@ logs/
 # Docker
 docker-data/
 
-# Models
-models/
+# ML model weights (top-level only)
+/models/
 
 # Coverage
 coverage/
