@@ -60,9 +60,9 @@ async function request<T>(
 }
 
 // ── Auth ────────────────────────────────────────────
-export async function login(email: string, password: string) {
+export async function login(username: string, password: string) {
   const formData = new URLSearchParams();
-  formData.append("username", email);
+  formData.append("username", username);
   formData.append("password", password);
 
   const res = await fetch(`${API_V1}/auth/login`, {
@@ -204,4 +204,44 @@ export function createDashboardWebSocket(): WebSocket | null {
   if (typeof window === "undefined") return null;
   const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws";
   return new WebSocket(`${wsUrl}/dashboard`);
+}
+
+export function createCallsWebSocket(): WebSocket | null {
+  if (typeof window === "undefined") return null;
+  const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws";
+  return new WebSocket(`${wsUrl}/calls`);
+}
+
+// ── Audit Logs ──────────────────────────────────────
+export function getAuditLogs(params?: { resource_type?: string; action?: string; limit?: number }) {
+  const query = new URLSearchParams();
+  if (params?.resource_type) query.set("resource_type", params.resource_type);
+  if (params?.action) query.set("action", params.action);
+  if (params?.limit) query.set("limit", String(params.limit));
+  return request<any>(`/audit/logs?${query}`);
+}
+
+export function getResourceAuditTrail(resourceType: string, resourceId: string) {
+  return request<any>(`/audit/logs/resource/${resourceType}/${resourceId}`);
+}
+
+// ── Workflow Engine ─────────────────────────────────
+export function getWorkflowSessions() {
+  return request<any>("/workflow/sessions");
+}
+
+export function getWorkflowSession(callId: string) {
+  return request<any>(`/workflow/sessions/${callId}`);
+}
+
+// ── EHR Sync ────────────────────────────────────────
+export function getEHRSyncStats() {
+  return request<any>("/ehr/sync/stats");
+}
+
+export function getEHRSyncLogs(params?: { status?: string; limit?: number }) {
+  const query = new URLSearchParams();
+  if (params?.status) query.set("status", params.status);
+  if (params?.limit) query.set("limit", String(params.limit));
+  return request<any>(`/ehr/sync/logs?${query}`);
 }

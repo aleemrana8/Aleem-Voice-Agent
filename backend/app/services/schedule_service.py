@@ -365,10 +365,10 @@ class ScheduleService:
         booked_appts = await Appointment.find(
             Appointment.doctor_id == doctor_id,
             Appointment.date == target_date,
-            Appointment.status.is_in([
+            {"status": {"$in": [
                 AppointmentStatus.SCHEDULED.value,
                 AppointmentStatus.CONFIRMED.value,
-            ]),
+            ]}},
         ).to_list()
         booked_set = {a.time_slot for a in booked_appts}
 

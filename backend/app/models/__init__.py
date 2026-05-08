@@ -10,6 +10,8 @@ from app.models.enums import (
     Speaker,
     NotificationType,
     DayOfWeek,
+    EHRSyncType,
+    EHRSyncStatus,
 )
 from app.models.user import User
 from app.models.patient import Patient
@@ -18,6 +20,8 @@ from app.models.appointment import Appointment
 from app.models.call_log import CallLog
 from app.models.transcript import Transcript
 from app.models.notification import Notification
+from app.models.ehr_sync import EHRSyncLog
+from app.models.audit_log import AuditLog
 
 ALL_DOCUMENT_MODELS = [
     User,
@@ -28,6 +32,8 @@ ALL_DOCUMENT_MODELS = [
     CallLog,
     Transcript,
     Notification,
+    EHRSyncLog,
+    AuditLog,
 ]
 
 __all__ = [
@@ -51,5 +57,7 @@ __all__ = [
     "CallLog",
     "Transcript",
     "Notification",
+    "EHRSyncLog",
+    "AuditLog",
     "ALL_DOCUMENT_MODELS",
 ]

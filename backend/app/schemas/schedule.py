@@ -60,7 +60,7 @@ class DayScheduleSchema(BaseModel):
     @classmethod
     def end_after_start(cls, v: str, info) -> str:
         start = info.data.get("start")
-        if start and v <= start:
+        if start and v != "00:00" and v <= start:
             raise ValueError("End time must be after start time")
         return v
 
@@ -96,7 +96,7 @@ class UpdateDayScheduleRequest(BaseModel):
     @classmethod
     def end_after_start(cls, v: str, info) -> str:
         start = info.data.get("start")
-        if start and v <= start:
+        if start and v != "00:00" and v <= start:
             raise ValueError("End time must be after start time")
         return v
 

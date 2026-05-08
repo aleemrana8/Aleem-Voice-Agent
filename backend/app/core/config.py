@@ -8,9 +8,14 @@ load_dotenv()
 
 class Settings(BaseSettings):
     # ── App ─────────────────────────────────────────
-    APP_NAME: str = "Aleem Voice Agent"
+    APP_NAME: str = "Aleem EHR System"
     APP_VERSION: str = "2.0.0"
-    DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
+    DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
+
+    # ── Default Admin ───────────────────────────────
+    ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "aleemehr")
+    ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "aleem811")
+    ADMIN_FULL_NAME: str = os.getenv("ADMIN_FULL_NAME", "Aleem Admin")
     ALLOWED_HOSTS: List[str] = ["*"]
 
     # ── MongoDB ─────────────────────────────────────
@@ -28,7 +33,9 @@ class Settings(BaseSettings):
     # ── CORS ────────────────────────────────────────
     BACKEND_CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
+        "http://localhost:3001",
         "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
     ]
 
     # ── Rate Limiting ───────────────────────────────
@@ -49,6 +56,17 @@ class Settings(BaseSettings):
     # ── OpenAI ──────────────────────────────────────
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o")
+
+    # ── EHR Integration ────────────────────────────
+    EHR_BASE_URL: str = os.getenv("EHR_BASE_URL", "")
+    EHR_API_KEY: str = os.getenv("EHR_API_KEY", "")
+
+    # ── Redis ───────────────────────────────────────
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+    # ── Celery ──────────────────────────────────────
+    CELERY_BROKER_URL: str = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/1")
+    CELERY_RESULT_BACKEND: str = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/2")
 
     # ── Logging ─────────────────────────────────────
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")

@@ -44,7 +44,8 @@ class DaySchedule(BaseModel):
     @classmethod
     def end_after_start(cls, v: str, info) -> str:
         start = info.data.get("start")
-        if start and v <= start:
+        # "00:00" means midnight (end of day), always valid
+        if start and v != "00:00" and v <= start:
             raise ValueError("End time must be after start time")
         return v
 
@@ -52,10 +53,17 @@ class DaySchedule(BaseModel):
     def breaks_within_hours(self):
         """Ensure every break falls within the working window."""
         for brk in self.breaks:
-            if brk.start < self.start or brk.end > self.end:
-                raise ValueError(
-                    f"Break {brk.start}-{brk.end} falls outside working hours {self.start}-{self.end}"
-                )
+            # For overnight schedules (end == "00:00"), breaks just need to be after start
+            if self.end == "00:00":
+                if brk.start < self.start:
+                    raise ValueError(
+                        f"Break {brk.start}-{brk.end} falls outside working hours {self.start}-{self.end}"
+                    )
+            else:
+                if brk.start < self.start or brk.end > self.end:
+                    raise ValueError(
+                        f"Break {brk.start}-{brk.end} falls outside working hours {self.start}-{self.end}"
+                    )
         # Check for overlapping breaks
         sorted_breaks = sorted(self.breaks, key=lambda b: b.start)
         for i in range(1, len(sorted_breaks)):
@@ -79,6 +87,10 @@ class Doctor(Document):
     qualification: Optional[str] = Field(None, max_length=200)
     experience_years: Optional[int] = Field(None, ge=0, le=60)
     consultation_fee: Optional[float] = Field(None, ge=0)
+    locations: List[str] = Field(
+        default_factory=list,
+        description="Locations where doctor practices (e.g. Islamabad, Multan)",
+    )
     schedule: Dict[str, DaySchedule] = Field(
         default_factory=dict,
         description="Weekly schedule keyed by lowercase day name",

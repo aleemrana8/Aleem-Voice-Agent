@@ -19,7 +19,7 @@ class Notification(Document):
     notification_id: str = Field(
         default_factory=lambda: f"NTF-{uuid.uuid4().hex[:8].upper()}"
     )
-    user_id: Indexed(Optional[str]) = None  # None = broadcast to all
+    user_id: Optional[Indexed(str)] = None  # None = broadcast to all
     title: str = Field(..., min_length=1, max_length=200)
     message: str = Field(..., min_length=1, max_length=2000)
     type: NotificationType = NotificationType.INFO

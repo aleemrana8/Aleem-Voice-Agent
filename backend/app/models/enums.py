@@ -79,7 +79,25 @@ class NotificationType(StrEnum):
     ERROR = "error"
 
 
-# ── Doctor Availability ─────────────────────────────
+# ── EHR Integration ────────────────────────────────
+class EHRSyncType(StrEnum):
+    APPOINTMENT_CREATED = "appointment_created"
+    APPOINTMENT_RESCHEDULED = "appointment_rescheduled"
+    APPOINTMENT_CANCELLED = "appointment_cancelled"
+    PATIENT_CREATED = "patient_created"
+    PATIENT_UPDATED = "patient_updated"
+    CALL_LOG_SYNCED = "call_log_synced"
+    TRANSCRIPT_SYNCED = "transcript_synced"
+
+
+class EHRSyncStatus(StrEnum):
+    PENDING = "pending"
+    SYNCED = "synced"
+    FAILED = "failed"
+    RETRY = "retry"
+
+
+# ── Day of Week ─────────────────────────────────────
 class DayOfWeek(StrEnum):
     MONDAY = "monday"
     TUESDAY = "tuesday"

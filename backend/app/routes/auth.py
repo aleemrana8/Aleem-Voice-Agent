@@ -39,17 +39,20 @@ async def register(data: UserCreate, admin: User = Depends(get_current_admin)):
 
 @router.post("/login", response_model=TokenResponse)
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    # Support login by email OR username
     user = await User.find_one(User.email == form_data.username)
+    if not user:
+        user = await User.find_one(User.username == form_data.username)
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Incorrect credentials",
         )
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Account is deactivated")
 
-    token = create_access_token(data={"sub": user.email, "role": user.role})
-    logger.info(f"User logged in: {user.email}")
+    token = create_access_token(data={"sub": user.email or user.username, "role": user.role})
+    logger.info(f"User logged in: {user.username or user.email}")
     return TokenResponse(
         access_token=token,
         user=UserResponse.from_doc(user),

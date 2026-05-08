@@ -1,161 +1,197 @@
 <div align="center">
 
-# 🏥 Aleem Voice Agent
+<img src="https://img.shields.io/badge/🏥-Aleem_Voice_Agent-0a0e1a?style=for-the-badge&labelColor=0a0e1a" alt="Aleem Voice Agent" />
 
-### AI-Powered Hospital Voice Receptionist & EHR System
+# Aleem Voice Agent
 
-[![CI/CD Pipeline](https://github.com/aleemrana8/Aleem-Voice-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/aleemrana8/Aleem-Voice-Agent/actions/workflows/ci.yml)
-[![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://python.org)
-[![Next.js 15](https://img.shields.io/badge/Next.js-15-000000?logo=next.js&logoColor=white)](https://nextjs.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![MongoDB](https://img.shields.io/badge/MongoDB-7.0-47A248?logo=mongodb&logoColor=white)](https://mongodb.com)
-[![OpenAI GPT-4o](https://img.shields.io/badge/OpenAI-GPT--4o-412991?logo=openai&logoColor=white)](https://openai.com)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docker.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+### 🤖 AI-Powered Hospital Voice Receptionist & EHR System
 
-**Patients call → AI answers → Appointments booked — all hands-free.**
+<br/>
 
-[Getting Started](#-quick-start) · [Features](#-features) · [Architecture](#-architecture) · [API Reference](#-api-reference) · [Contributing](#-contributing)
+[![Python 3.14](https://img.shields.io/badge/Python-3.14-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.135-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Next.js 15](https://img.shields.io/badge/Next.js-15-000000?style=flat-square&logo=next.js&logoColor=white)](https://nextjs.org)
+[![React 19](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
+[![MongoDB 7](https://img.shields.io/badge/MongoDB-7.0-47A248?style=flat-square&logo=mongodb&logoColor=white)](https://mongodb.com)
+[![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=flat-square&logo=redis&logoColor=white)](https://redis.io)
+[![OpenAI GPT-4o](https://img.shields.io/badge/OpenAI-GPT--4o-412991?style=flat-square&logo=openai&logoColor=white)](https://openai.com)
+[![LiveKit](https://img.shields.io/badge/LiveKit-Cloud-FF4785?style=flat-square&logo=webrtc&logoColor=white)](https://livekit.io)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docker.com)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
+
+<br/>
+
+```
+Patient calls hospital  →  AI answers in real-time  →  Appointment booked — all hands-free
+```
+
+<br/>
+
+[Features](#-features) · [Architecture](#-system-architecture) · [Quick Start](#-quick-start) · [Admin Panel](#-admin-panel) · [API Docs](#-api-reference) · [FSM Engine](#-24-state-fsm-voice-engine)
 
 ---
 
 </div>
 
+<br/>
+
 ## 🎯 Purpose
 
-**Aleem Voice Agent** eliminates the need for human receptionists in hospital front desks. When a patient calls the hospital number, an **AI receptionist powered by OpenAI GPT-4o** answers the call, verifies the patient's identity, checks doctor availability in real-time, and books/reschedules/cancels appointments — all through natural voice conversation.
+**Aleem Voice Agent** is a production-grade, AI-native healthcare platform that replaces human receptionists with an intelligent voice AI system. When patients call the hospital phone number, a **24-state Finite State Machine (FSM)** powered by **OpenAI GPT-4o** handles the entire conversation — from greeting and patient identification to appointment booking, rescheduling, and cancellation — through natural voice interaction.
 
-The system provides a **real-time admin dashboard** where hospital staff can monitor live calls, view transcripts, manage schedules, and track every interaction.
+The platform includes a full **Electronic Health Record (EHR)** system with an **athenahealth-inspired admin panel**, real-time dashboards, audit logging, and multi-branch support across **Islamabad** and **Multan** locations.
+
+> **Not a chatbot.** This is a complete voice-first hospital management system with real SIP telephony, slot locking, concurrent call handling, and HIPAA-ready audit trails.
+
+<br/>
 
 ## 🔭 Scope
 
-| Area | Coverage |
-|------|----------|
-| **Voice Interaction** | Full-duplex voice calls with STT (Whisper) and TTS (Coqui) |
-| **Appointment Management** | Book, reschedule, cancel with conflict detection |
-| **Patient Management** | Registration, verification, medical history tracking |
-| **Doctor Management** | Profiles, weekly schedules, real-time availability |
-| **Call Analytics** | Full transcripts, call logs, intent classification |
-| **Dashboard** | Real-time stats, WebSocket live updates, notifications |
-| **Security** | JWT auth, RBAC (admin/doctor/staff), bcrypt passwords |
-| **Deployment** | Docker Compose, CI/CD with GitHub Actions |
-
-## 🌟 Goals
-
-- 🏥 **Zero Wait Time** — Patients never wait on hold; AI answers instantly
-- 🤖 **Intelligent Conversations** — GPT-4o with function calling for real database actions
-- 📊 **Full Visibility** — Every call, transcript, and booking tracked on a live dashboard
-- 🔐 **Enterprise Security** — JWT tokens, role-based access, encrypted passwords
-- 🚀 **Production Ready** — Docker deployment, CI/CD pipeline, structured logging
-- 📱 **Mobile Responsive** — Dashboard works on any device
+| Domain | Coverage |
+|--------|----------|
+| 🎙️ **Voice AI** | 24-state FSM receptionist, SIP telephony, real-time STT/TTS, concurrent call handling |
+| 🏥 **Clinical** | Patient registry, doctor management, appointment scheduling, EHR sync |
+| 📊 **Operations** | Real-time dashboards, analytics, audit trails, multi-branch management |
+| 🔐 **Security** | JWT authentication, bcrypt passwords, RBAC, rate limiting, CORS |
+| 🐳 **DevOps** | Docker Compose orchestration, CI/CD pipeline, Nginx reverse proxy |
 
 ---
 
 ## ✨ Features
 
-### 🎙️ AI Voice Receptionist
-> Patients call and speak naturally. The AI understands intent, asks follow-up questions, verifies identity, and performs real actions.
+### 🎙️ 24-State FSM Voice Receptionist
+
+> Not a simple chatbot — a production-grade **Finite State Machine** that handles complex multi-turn medical conversations with slot locking, spelling confirmation, and go-back support.
 
 ```
-Patient: "I'd like to book an appointment with Dr. Sarah Ahmed"
-   AI: "I'd be happy to help! Could you provide your phone number for verification?"
-Patient: "It's +1234567890"
-   AI: "Thank you. For security, could you confirm your date of birth?"
-Patient: "May 15, 1990"
-   AI: "You're verified! Dr. Sarah Ahmed is available tomorrow at 9:00, 9:30, 10:00, 
-        10:30, and 11:00 AM. What time works best?"
-Patient: "10 AM please, it's for a general checkup"
-   AI: "Your appointment with Dr. Sarah Ahmed is confirmed for tomorrow at 10:00 AM 
-        for a general checkup. Is there anything else I can help with?"
+Patient:  "I'd like to book an appointment"
+   AI:    "I'd be happy to help! Are you an existing patient or a new patient?"
+Patient:  "New patient"
+   AI:    "Welcome! Could you tell me your first name?"
+Patient:  "Muhammad"
+   AI:    "And your last name?"
+Patient:  "Aleem — that's A-L-E-E-M"
+   AI:    "Let me confirm: A-L-E-E-M. Is that correct?"
+Patient:  "Yes"
+   AI:    "Thank you Muhammad Aleem! Which location — Islamabad or Multan?"
+Patient:  "Islamabad"
+   AI:    "We have Dr. Aleem and Dr. Mohsin available. Who would you prefer?"
+Patient:  "Dr. Mohsin"
+   AI:    "Dr. Mohsin has slots on May 10th at 3:00 PM, 3:30 PM, 4:00 PM, 
+           4:30 PM, and 5:00 PM. What works best?"
+Patient:  "3:30 PM"
+   AI:    "Confirming: Dr. Mohsin, Islamabad, May 10th at 3:30 PM. Shall I book?"
+Patient:  "Yes please"
+   AI:    "Your appointment is confirmed! Appointment ID: APT-240510-001. 
+           Is there anything else I can help with?"
 ```
 
-### 📅 Smart Appointment System
-- **Book** — AI checks real-time slot availability before confirming
-- **Reschedule** — Move appointments with conflict detection
-- **Cancel** — Cancel with reason tracking and notifications
-- **Availability Engine** — Generates slots from doctor weekly schedules, filters booked ones
+**FSM States:**
+```
+greeting → identify_intent → ask_patient_type → collect_name → spell_name →
+confirm_spelling → lookup_patient → collect_dob → collect_phone →
+register_patient → choose_location → choose_provider → choose_date →
+offer_slots → confirm_booking → booking_complete → find_appointment →
+confirm_reschedule → confirm_cancel → general_info → escalate →
+farewell → error_recovery → fallback
+```
 
-### 📊 Real-Time Admin Dashboard
-- Live statistics (patients, doctors, appointments, active calls)
-- Appointment breakdown charts (scheduled/completed/cancelled)
-- Recent appointments and calls feed
-- **WebSocket-powered** — updates push to dashboard instantly when AI books appointments
+### 📅 Smart Scheduling Engine
+- **Slot Locking** — 5-minute reservation with auto-expiry to prevent double booking
+- **Real-time Availability** — Generates slots from doctor schedules, filters booked ones
+- **Concurrent Safe** — Multiple AI calls can book simultaneously without conflicts
+- **Multi-location** — Islamabad and Multan branches with doctor-location mapping
+- **Hospital Hours** — 3:00 PM to Midnight, with 8-9 PM break, 30-minute slots
 
-### 📞 Call Logs & Transcripts
-- Every AI call logged with duration, intent, outcome
-- Full conversation transcripts (patient ↔ agent)
-- Intent classification (booking, reschedule, cancel, inquiry)
-- Call status tracking (in_progress, completed, failed)
+### 📊 Dual Dashboard System
 
-### 🔔 Notification System
-- Real-time notifications for new bookings, cancellations, reschedules
-- Unread count badge in header
-- Mark individual or bulk read
-- Notification types: info, success, warning, error
+**Dashboard** (`/dashboard`) — Operational staff view:
+- Live KPI cards, appointment breakdown, recent activity
+- WebSocket-powered real-time updates
 
-### 👥 Patient & Doctor Management
-- Patient registration with full profile (DOB, gender, emergency contact)
-- Phone + DOB verification for security
-- Doctor profiles with weekly schedule configuration
-- Per-day time slots with configurable duration
+**Admin Panel** (`/admin`) — Full administration suite:
+- AI-powered insights banner with real-time metrics
+- Doctor profiles with schedule visualization
+- Voice Command Center with live call monitoring & transcripts
+- Analytics with charts, trends, and branch comparison
+- EHR sync logs, audit trails, system settings
+
+### 🧠 AI & NLU Pipeline
+
+```
+📞 Phone Call → LiveKit Room
+    ↓
+🎙️ Whisper STT (Speech → Text)
+    ↓
+🧠 GPT-4o Intent Extraction (13 intents, JSON output, temp=0.1)
+    ↓
+⚙️ FSM Engine (24 states, context-aware transitions)
+    ↓
+🔊 OpenAI TTS "Alloy" (Text → Speech)
+    ↓
+📞 Audio back to caller
+```
+
+### 🔒 Security & Compliance
+- JWT authentication with OAuth2 password flow
+- bcrypt password hashing (Python 3.14 compatible)
+- Full audit trail for every system operation
+- Request ID middleware for tracing
+- Rate limiting (120 req/min configurable)
+- CORS whitelist enforcement
+
+### 📞 SIP Telephony
+- LiveKit SIP Trunk integration
+- Inbound phone number: `4406848838`
+- Automatic room creation per call
+- Call metadata logging (duration, intent, outcome)
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     FRONTEND (Next.js 15)                   │
-│  ┌───────────┬──────────────┬───────────┬─────────────────┐ │
-│  │ Dashboard │ Appointments │ Patients  │  Voice Agent    │ │
-│  │   Stats   │   Booking    │  Doctors  │  Call Logs      │ │
-│  └───────────┴──────┬───────┴───────────┴─────────────────┘ │
-│                     │  REST API + WebSocket                  │
-├─────────────────────┼───────────────────────────────────────┤
-│                     ▼       BACKEND (FastAPI)                │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │   API Routes  │  WebSocket Manager  │  JWT + RBAC    │   │
-│  ├──────────────────────────────────────────────────────┤   │
-│  │   Voice Agent Service  │  LLM Service (GPT-4o)      │   │
-│  │   Function Calling: verify, book, reschedule, cancel │   │
-│  └──────────┬─────────────────┬─────────────────────────┘   │
-├─────────────┼─────────────────┼─────────────────────────────┤
-│             ▼                 ▼                              │
-│  ┌──────────────────┐  ┌──────────────────────────────┐     │
-│  │   MongoDB 7      │  │   LiveKit + Whisper + Coqui  │     │
-│  │   Beanie ODM     │  │   (Voice Pipeline)           │     │
-│  └──────────────────┘  └──────────────────────────────┘     │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Voice Call Flow
-
-```
-📞 Patient Calls Hospital
-         │
-         ▼
-🎙️ LiveKit Room Created ──── Audio Captured
-         │
-         ▼
-🗣️ Whisper.cpp (STT) ────── Speech → Text
-         │
-         ▼
-🧠 OpenAI GPT-4o ─────────── Intent Detection + Function Calling
-         │                         │
-         │          ┌──────────────┼──────────────┐
-         │          ▼              ▼              ▼
-         │    verify_patient  book_appointment  check_availability
-         │          │              │              │
-         │          └──────────────┼──────────────┘
-         │                         │
-         ▼                         ▼
-🔊 Coqui TTS ─────────────── Text → Speech → Patient Hears Response
-         │
-         ▼
-💾 Saved: Transcript + Call Log + Notification
-         │
-         ▼
-📊 Dashboard Updated via WebSocket (Real-time)
+┌──────────────────────────────────────────────────────────────────────┐
+│                        FRONTEND (Next.js 15)                        │
+│  ┌─────────────────────────────┐  ┌────────────────────────────┐    │
+│  │    Dashboard (/dashboard)   │  │   Admin Panel (/admin)     │    │
+│  │  Stats · Appointments ·     │  │  Dashboard · Analytics ·   │    │
+│  │  Patients · Doctors ·       │  │  Voice Center · Settings · │    │
+│  │  Calls · Notifications      │  │  EHR · Audit · Doctors     │    │
+│  └──────────────┬──────────────┘  └─────────────┬──────────────┘    │
+│                 │           REST + WebSocket      │                   │
+├─────────────────┼────────────────────────────────┼───────────────────┤
+│                 ▼                                 ▼                   │
+│                      BACKEND (FastAPI / Uvicorn)                     │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  12 API Routers · 72 Endpoints · JWT Auth · Rate Limiter    │    │
+│  ├──────────────────────────────────────────────────────────────┤    │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌───────────────────┐  │    │
+│  │  │  Workflow     │  │  Scheduling  │  │  Intent           │  │    │
+│  │  │  Engine       │  │  Engine      │  │  Extractor        │  │    │
+│  │  │  (24-state    │  │  (Slot lock, │  │  (GPT-4o NLU,    │  │    │
+│  │  │   FSM)        │  │   reserve,   │  │   13 intents)    │  │    │
+│  │  │              │  │   book)      │  │                   │  │    │
+│  │  └──────┬───────┘  └──────┬───────┘  └────────┬──────────┘  │    │
+│  │         └─────────────────┼───────────────────┘              │    │
+│  │                           ▼                                   │    │
+│  │  ┌──────────────────────────────────────────────────────┐    │    │
+│  │  │  LiveKit Agent  (STT → NLU → FSM → TTS pipeline)    │    │    │
+│  │  └──────────────────────────────────────────────────────┘    │    │
+│  │                                                               │    │
+│  │  Services: Audit · EHR Sync · WebSocket · Patient · Doctor   │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                 │                    │                    │           │
+├─────────────────┼────────────────────┼────────────────────┼──────────┤
+│                 ▼                    ▼                    ▼          │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐   │
+│  │   MongoDB 7      │  │   Redis 7        │  │   LiveKit Cloud  │   │
+│  │   Beanie ODM     │  │   Cache/Celery   │  │   SIP + WebRTC   │   │
+│  │   10 collections │  │   3 databases    │  │   Whisper + TTS  │   │
+│  └──────────────────┘  └──────────────────┘  └──────────────────┘   │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -165,19 +201,48 @@ Patient: "10 AM please, it's for a general checkup"
 <div align="center">
 
 | Layer | Technology | Purpose |
-|-------|-----------|---------|
-| 🖥️ **Frontend** | Next.js 15, React 19, TypeScript | Dashboard & UI |
-| 🎨 **Styling** | Tailwind CSS, shadcn/ui, Lucide Icons | Modern responsive design |
-| ⚡ **Backend** | FastAPI, Python 3.11, Uvicorn | Async API server |
-| 🗄️ **Database** | MongoDB 7, Beanie ODM, Motor | Document storage |
-| 🔐 **Auth** | JWT, bcrypt, RBAC | Security layer |
-| 🧠 **LLM** | OpenAI GPT-4o with Function Calling | AI conversation engine |
-| 🎙️ **Voice STT** | Whisper.cpp | Speech-to-text |
-| 🔊 **Voice TTS** | Coqui TTS | Text-to-speech |
-| 🎛️ **Voice Pipeline** | Pipecat AI, LiveKit | Real-time voice orchestration |
-| 🔄 **Realtime** | WebSockets | Live dashboard updates |
-| 🐳 **Deploy** | Docker Compose | Container orchestration |
-| 🔁 **CI/CD** | GitHub Actions | Automated testing & linting |
+|:------|:-----------|:--------|
+| 🖥️ **Frontend** | Next.js 15, React 19, TypeScript 5.6 | Server-side rendering, modern UI |
+| 🎨 **UI/UX** | Tailwind CSS, shadcn/ui, Framer Motion, Lucide | Glass morphism dark theme, animations |
+| ⚡ **Backend** | FastAPI, Python 3.14, Uvicorn, Pydantic v2 | Async API server with validation |
+| 🗄️ **Database** | MongoDB 7, Beanie ODM, Motor async driver | Document storage with async queries |
+| 📦 **Cache** | Redis 7, Celery | Caching, task queue, pub/sub |
+| 🔐 **Auth** | JWT (python-jose), bcrypt, OAuth2 | Token-based authentication |
+| 🧠 **AI/LLM** | OpenAI GPT-4o, temperature 0.1 | Intent extraction, entity recognition |
+| 🎙️ **Voice STT** | OpenAI Whisper | Real-time speech-to-text |
+| 🔊 **Voice TTS** | OpenAI TTS (Alloy voice) | Natural text-to-speech |
+| 🎛️ **Voice Pipeline** | LiveKit Agents SDK, LiveKit Cloud | Real-time voice orchestration |
+| 📞 **Telephony** | LiveKit SIP Trunk | Inbound phone call handling |
+| 🔄 **Real-time** | WebSockets (FastAPI native) | Live dashboard updates |
+| 🐳 **Infrastructure** | Docker Compose, Nginx | Container orchestration, reverse proxy |
+| 🧪 **Testing** | pytest, pytest-asyncio, Ruff | Unit tests, async tests, linting |
+| 🔁 **CI/CD** | GitHub Actions | Automated testing pipeline |
+
+</div>
+
+---
+
+## 📸 Screenshots
+
+<div align="center">
+
+### Landing Page
+> Modern hero section with animated features, statistics, and workflow steps
+
+### Admin Dashboard
+> AI-powered insights, KPI cards, appointment charts, doctor cards, and live activity feeds
+
+### Voice Command Center
+> Real-time AI call monitoring, FSM state visualization, intent distribution, and transcript viewer
+
+### Patient Management
+> Professional table view with search, registration form, and detail side panel
+
+### Appointment Scheduling
+> Status filters, real-time slot checking, inline reschedule with slot picker
+
+### Analytics & Reports
+> Monthly trends, weekday distribution, hourly heatmap, branch comparison, AI performance
 
 </div>
 
@@ -188,69 +253,118 @@ Patient: "10 AM please, it's for a general checkup"
 ```
 Aleem-Voice-Agent/
 │
-├── 🔧 .github/workflows/ci.yml    # CI/CD pipeline
-├── 🐳 docker-compose.yml           # All services orchestration
-├── 📋 .env.example                  # Environment template
+├── .github/workflows/ci.yml         # CI/CD pipeline
+├── docker-compose.yml                # Full stack orchestration (7 services)
+├── docker/
+│   ├── mongo-init.js                 # Database initialization
+│   └── nginx.conf                    # Reverse proxy config
 │
-├── ⚡ backend/
+├── backend/                          # Python FastAPI Backend
 │   ├── Dockerfile
-│   ├── requirements.txt
+│   ├── requirements.txt              # 25+ production dependencies
+│   ├── pyproject.toml                # Ruff linter config
 │   └── app/
-│       ├── main.py                  # FastAPI entry + WebSocket + CORS
+│       ├── main.py                   # FastAPI app + lifespan + 12 routers
+│       ├── livekit_agent.py          # LiveKit voice agent worker
+│       │
 │       ├── core/
-│       │   ├── config.py            # Settings (OpenAI, MongoDB, JWT)
-│       │   ├── database.py          # MongoDB + Beanie initialization
-│       │   ├── security.py          # JWT auth, password hashing, RBAC
-│       │   └── logging.py           # Loguru structured logging
-│       ├── models/                  # 7 MongoDB document models
-│       │   ├── user.py              # User + auth schemas
-│       │   ├── patient.py           # Patient + verification
-│       │   ├── doctor.py            # Doctor + schedule
-│       │   ├── appointment.py       # Appointment + status tracking
-│       │   ├── call_log.py          # Call metadata
-│       │   ├── transcript.py        # Conversation entries
-│       │   └── notification.py      # Alert system
-│       ├── routes/                  # 8 API route modules
-│       │   ├── auth.py              # Login, register, profile
-│       │   ├── patients.py          # CRUD + phone verification
-│       │   ├── doctors.py           # CRUD + availability engine
-│       │   ├── appointments.py      # Book / reschedule / cancel
-│       │   ├── calls.py             # Call logs + transcripts
-│       │   ├── notifications.py     # Read status management
-│       │   ├── dashboard.py         # Stats + recent activity
-│       │   └── voice.py             # Voice endpoints + WebSocket
-│       └── services/                # Business logic
-│           ├── llm_service.py       # GPT-4o + 7 function tools
-│           ├── voice_agent.py       # Call orchestration engine
-│           ├── websocket_manager.py # Real-time broadcast
-│           └── livekit_service.py   # LiveKit token management
+│       │   ├── config.py             # Settings (MongoDB, JWT, LiveKit, SIP)
+│       │   ├── database.py           # MongoDB + Beanie async init
+│       │   ├── security.py           # JWT + bcrypt + OAuth2
+│       │   ├── logging.py            # Loguru structured logging
+│       │   └── celery_app.py         # Celery task queue config
+│       │
+│       ├── models/                   # 10 Beanie document models
+│       │   ├── user.py               # User authentication
+│       │   ├── patient.py            # Patient records + verification
+│       │   ├── doctor.py             # Doctor + DaySchedule + BreakTime
+│       │   ├── appointment.py        # Appointment lifecycle tracking
+│       │   ├── call_log.py           # Voice call metadata
+│       │   ├── transcript.py         # Conversation entries
+│       │   ├── notification.py       # System alerts
+│       │   ├── audit_log.py          # Audit trail records
+│       │   ├── ehr_sync.py           # EHR synchronization logs
+│       │   └── enums.py              # Shared enums (roles, statuses)
+│       │
+│       ├── routes/                   # 12 API router modules (72 endpoints)
+│       │   ├── auth.py               # Login, register, profile
+│       │   ├── patients.py           # CRUD + phone verification
+│       │   ├── doctors.py            # CRUD + availability engine
+│       │   ├── appointments.py       # Book / reschedule / cancel
+│       │   ├── calls.py              # Call logs + transcripts
+│       │   ├── notifications.py      # Notification management
+│       │   ├── dashboard.py          # Stats + recent activity
+│       │   ├── voice.py              # Voice endpoints
+│       │   ├── schedules.py          # Doctor schedule management
+│       │   ├── ehr.py                # EHR sync endpoints
+│       │   ├── audit.py              # Audit log queries
+│       │   └── workflow.py           # FSM workflow endpoints
+│       │
+│       ├── services/                 # Business logic layer
+│       │   ├── workflow_engine.py    # ★ 24-state FSM conversation engine
+│       │   ├── scheduling_engine.py  # ★ Slot locking + appointment ops
+│       │   ├── intent_extractor.py   # ★ GPT-4o NLU (13 intents)
+│       │   ├── appointment_service.py# Appointment CRUD + EHR sync
+│       │   ├── doctor_service.py     # Doctor queries + availability
+│       │   ├── patient_service.py    # Patient CRUD + verification
+│       │   ├── audit_service.py      # Audit trail logging
+│       │   ├── ehr_service.py        # EHR sync operations
+│       │   ├── websocket_manager.py  # Real-time broadcast manager
+│       │   ├── livekit_service.py    # LiveKit token management
+│       │   ├── llm_service.py        # OpenAI API wrapper
+│       │   ├── schedule_service.py   # Schedule CRUD
+│       │   └── voice_agent.py        # Voice call orchestration
+│       │
+│       ├── schemas/                  # Pydantic request/response models
+│       ├── middleware/               # Request ID, rate limiter, errors
+│       ├── tasks/                    # Celery async tasks
+│       ├── utils/                    # Helpers, validators, constants
+│       ├── scripts/                  # Seed scripts (doctors, SIP)
+│       └── tests/                    # pytest test suite
 │
-├── 🖥️ frontend/
+├── frontend/                         # Next.js 15 Frontend
 │   ├── Dockerfile
 │   ├── package.json
 │   └── src/
 │       ├── app/
-│       │   ├── layout.tsx           # Root layout
-│       │   ├── globals.css          # Tailwind + shadcn theme
-│       │   ├── login/page.tsx       # Authentication page
-│       │   └── dashboard/
-│       │       ├── layout.tsx       # Sidebar + header shell
-│       │       ├── page.tsx         # Dashboard with live stats
-│       │       ├── appointments/    # Appointment management
-│       │       ├── patients/        # Patient registry
-│       │       ├── doctors/         # Doctor schedules
-│       │       ├── calls/           # Call logs + transcripts
-│       │       ├── voice/           # Voice agent test UI
-│       │       └── notifications/   # Notification center
+│       │   ├── layout.tsx            # Root layout
+│       │   ├── page.tsx              # Landing page (hero + features)
+│       │   ├── globals.css           # Tailwind + glass morphism theme
+│       │   ├── login/page.tsx        # Authentication page
+│       │   │
+│       │   ├── dashboard/            # Staff Dashboard
+│       │   │   ├── layout.tsx        # Sidebar + header shell
+│       │   │   ├── page.tsx          # Live stats + recent activity
+│       │   │   ├── appointments/     # Appointment management
+│       │   │   ├── patients/         # Patient registry
+│       │   │   ├── doctors/          # Doctor schedules
+│       │   │   ├── calls/            # Call logs + transcripts
+│       │   │   ├── voice/            # Voice agent test UI
+│       │   │   └── notifications/    # Notification center
+│       │   │
+│       │   └── admin/                # ★ Admin Panel (athenahealth-inspired)
+│       │       ├── layout.tsx        # Admin layout + auth guard
+│       │       ├── page.tsx          # Rich dashboard (KPIs, charts, insights)
+│       │       ├── patients/         # Patient management + detail panel
+│       │       ├── appointments/     # Booking + reschedule + slot picker
+│       │       ├── doctors/          # Profile cards + schedule view
+│       │       ├── voice-center/     # AI call monitor + transcripts
+│       │       ├── analytics/        # Charts, trends, AI performance
+│       │       ├── ehr-records/      # EHR sync log viewer
+│       │       ├── audit-logs/       # Timeline audit trail
+│       │       └── settings/         # Tabbed system configuration
+│       │
 │       ├── components/
+│       │   ├── admin/                # AdminSidebar, AdminHeader
 │       │   ├── layout/              # Sidebar, Header
-│       │   └── ui/                  # Button, Card, Input, Badge, Label
+│       │   └── ui/                  # shadcn: Button, Card, Input, Badge, Label
+│       │
 │       └── lib/
-│           ├── api.ts               # Full API client (REST + WebSocket)
-│           └── utils.ts             # Tailwind merge utility
+│           ├── api.ts               # Full API client (250+ lines)
+│           ├── types.ts             # TypeScript interfaces
+│           └── utils.ts             # cn() utility
 │
-└── 🗄️ docker/
-    └── mongo-init.js                # DB seed (admin + 3 doctors)
+└── LICENSE                          # MIT License
 ```
 
 ---
@@ -259,8 +373,12 @@ Aleem-Voice-Agent/
 
 ### Prerequisites
 
-- **Docker & Docker Compose** installed
-- **OpenAI API Key** ([get one here](https://platform.openai.com/api-keys))
+| Tool | Version | Required |
+|------|---------|----------|
+| Docker + Docker Compose | 20+ | ✅ |
+| OpenAI API Key | — | ✅ |
+| Node.js | 18+ | For local frontend dev |
+| Python | 3.11+ | For local backend dev |
 
 ### 1. Clone
 
@@ -273,128 +391,279 @@ cd Aleem-Voice-Agent
 
 ```bash
 cp .env.example .env
-# Edit .env → add your OPENAI_API_KEY
 ```
 
-### 3. Launch
+Edit `.env` and add your keys:
+```env
+OPENAI_API_KEY=sk-your-key-here
+LIVEKIT_API_KEY=your-livekit-key
+LIVEKIT_API_SECRET=your-livekit-secret
+```
+
+### 3. Launch (Docker)
 
 ```bash
 docker-compose up -d
 ```
 
-### 4. Access
+### 4. Launch (Local Development)
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| 🖥️ Dashboard | [http://localhost:3000](http://localhost:3000) | Admin frontend |
-| ⚡ API | [http://localhost:8000](http://localhost:8000) | Backend server |
-| 📚 API Docs | [http://localhost:8000/docs](http://localhost:8000/docs) | Swagger UI |
-| 🗄️ MongoDB | `mongodb://localhost:27017` | Database |
-| 🎙️ LiveKit | `ws://localhost:7880` | Voice server |
+**Backend:**
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
 
-### 5. Login
+**Frontend:**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### 5. Access
+
+| Service | URL |
+|---------|-----|
+| 🖥️ Landing Page | [http://localhost:3000](http://localhost:3000) |
+| 📊 Staff Dashboard | [http://localhost:3000/dashboard](http://localhost:3000/dashboard) |
+| 🏥 Admin Panel | [http://localhost:3000/admin](http://localhost:3000/admin) |
+| ⚡ API Server | [http://localhost:8000](http://localhost:8000) |
+| 📚 Swagger Docs | [http://localhost:8000/docs](http://localhost:8000/docs) |
+| 📘 ReDoc | [http://localhost:8000/redoc](http://localhost:8000/redoc) |
+
+### 6. Login
 
 | Field | Value |
 |-------|-------|
-| Email | `admin@aleemehr.com` |
-| Password | `admin123` |
+| Username | `aleemehr` |
+| Password | `aleem811` |
+
+---
+
+## 🖥️ Admin Panel
+
+The admin panel at `/admin` is an **athenahealth-inspired** healthcare administration interface with a dark glass-morphism theme:
+
+| Page | Key Features |
+|------|-------------|
+| **Dashboard** | 6 KPI cards, AI insight banner, animated activity chart, appointment donut, doctor cards, recent activity |
+| **Patients** | Stats banner, registration form, searchable table, side detail panel with appointment history |
+| **Appointments** | Status filter pills, booking form with real-time slot checking, inline reschedule with slot picker |
+| **Doctors** | Profile cards with gradient banners, location badges, full daily schedule visualization |
+| **Voice Center** | FSM pipeline banner, intent distribution, call history with live indicators, transcript viewer |
+| **Analytics** | Monthly trends, weekday distribution, hourly heatmap, branch comparison, AI performance metrics |
+| **EHR Records** | Sync statistics, status filters, sync log timeline with type icons |
+| **Audit Logs** | Timeline with action-based icons/colors, expandable JSON details, search + filter |
+| **Settings** | 4 tabs: General (hospital, branches, schedule), Notifications (5 channels), Security, Integrations |
+
+---
+
+## ⚙️ 24-State FSM Voice Engine
+
+The heart of the system — a deterministic conversation engine:
+
+```
+                          ┌──────────┐
+                          │ GREETING │
+                          └────┬─────┘
+                               │
+                      ┌────────▼────────┐
+                      │ IDENTIFY_INTENT │
+                      └────┬───┬───┬────┘
+              ┌────────────┘   │   └────────────┐
+              ▼                ▼                  ▼
+     ┌──────────────┐  ┌─────────────┐  ┌──────────────┐
+     │  BOOK FLOW   │  │ RESCHEDULE  │  │ CANCEL FLOW  │
+     └──────┬───────┘  └──────┬──────┘  └──────┬───────┘
+            │                  │                 │
+   ┌────────▼────────┐        │        ┌────────▼────────┐
+   │ ASK_PATIENT_TYPE │        │        │ FIND_APPOINTMENT │
+   └────────┬────────┘        │        └────────┬────────┘
+            │                  │                 │
+  ┌─────────▼──────────┐      │      ┌──────────▼──────────┐
+  │   COLLECT_NAME     │      │      │  CONFIRM_CANCEL     │
+  │   SPELL_NAME       │      │      └─────────────────────┘
+  │   CONFIRM_SPELLING │      │
+  └────────┬───────────┘      │
+           │                   │
+  ┌────────▼────────┐  ┌──────▼──────────┐
+  │ LOOKUP_PATIENT  │  │ CONFIRM_         │
+  │ (or REGISTER)   │  │ RESCHEDULE       │
+  └────────┬────────┘  └─────────────────┘
+           │
+  ┌────────▼────────┐
+  │ CHOOSE_LOCATION │
+  │ CHOOSE_PROVIDER │
+  │ CHOOSE_DATE     │
+  │ OFFER_SLOTS     │
+  └────────┬────────┘
+           │
+  ┌────────▼──────────┐
+  │ CONFIRM_BOOKING   │
+  └────────┬──────────┘
+           │
+  ┌────────▼──────────┐         ┌──────────────────────────────┐
+  │ BOOKING_COMPLETE  │────────▶│ FAREWELL                     │
+  └───────────────────┘         └──────────────────────────────┘
+  
+  Error States: error_recovery · fallback · escalate (after 3 failures)
+```
+
+**13 Recognized Intents:**
+
+`book_appointment` · `reschedule_appointment` · `cancel_appointment` · `check_availability` · `general_info` · `yes` · `no` · `provide_info` · `change_selection` · `go_back` · `repeat` · `escalate` · `farewell`
 
 ---
 
 ## 📡 API Reference
 
+> **72 endpoints** across 12 routers. Full interactive docs at `/docs` (Swagger) and `/redoc`.
+
 ### Authentication
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| `POST` | `/api/v1/auth/login` | User login (OAuth2 form) | Public |
-| `POST` | `/api/v1/auth/register` | Register new user | Admin |
-| `GET` | `/api/v1/auth/me` | Current user profile | Bearer |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/auth/login` | OAuth2 password login → JWT token |
+| `GET` | `/api/v1/auth/me` | Get current user profile |
 
 ### Patients
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| `GET` | `/api/v1/patients/` | List patients (search, paginate) | Bearer |
-| `POST` | `/api/v1/patients/` | Register new patient | Bearer |
-| `GET` | `/api/v1/patients/{id}` | Get patient details | Bearer |
-| `PUT` | `/api/v1/patients/{id}` | Update patient | Bearer |
-| `POST` | `/api/v1/patients/verify` | Verify via phone + DOB | Public |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/patients/` | List patients (search, paginate) |
+| `POST` | `/api/v1/patients/` | Register new patient |
+| `GET` | `/api/v1/patients/{id}` | Get patient details |
+| `PUT` | `/api/v1/patients/{id}` | Update patient |
+| `POST` | `/api/v1/patients/verify` | Verify via phone + DOB |
 
 ### Doctors
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| `GET` | `/api/v1/doctors/` | List doctors (filter by specialty) | Bearer |
-| `POST` | `/api/v1/doctors/` | Add new doctor | Admin |
-| `PUT` | `/api/v1/doctors/{id}` | Update doctor / schedule | Admin |
-| `POST` | `/api/v1/doctors/availability` | Check available slots | Public |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/doctors/` | List all doctors |
+| `POST` | `/api/v1/doctors/` | Add new doctor |
+| `PUT` | `/api/v1/doctors/{id}` | Update doctor + schedule |
+| `POST` | `/api/v1/doctors/availability` | Check available slots |
 
 ### Appointments
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| `GET` | `/api/v1/appointments/` | List (filter: status, date, doctor) | Bearer |
-| `POST` | `/api/v1/appointments/` | Book new appointment | Bearer |
-| `PUT` | `/api/v1/appointments/{id}/reschedule` | Reschedule | Bearer |
-| `PUT` | `/api/v1/appointments/{id}/cancel` | Cancel | Bearer |
-| `GET` | `/api/v1/appointments/stats/summary` | Statistics | Bearer |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/appointments/` | List (filter: status, date, doctor) |
+| `POST` | `/api/v1/appointments/` | Book new appointment |
+| `GET` | `/api/v1/appointments/{id}` | Get appointment details |
+| `PUT` | `/api/v1/appointments/{id}/reschedule` | Reschedule appointment |
+| `PUT` | `/api/v1/appointments/{id}/cancel` | Cancel appointment |
+| `GET` | `/api/v1/appointments/stats/summary` | Appointment statistics |
 
-### Voice Agent
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| `POST` | `/api/v1/voice/call/start` | Start voice call session | Public |
-| `POST` | `/api/v1/voice/call/{id}/process` | Process speech text | Public |
-| `POST` | `/api/v1/voice/call/{id}/end` | End call session | Public |
-| `WS` | `/api/v1/voice/ws/call/{id}` | Real-time voice stream | — |
+### Calls & Voice
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/calls/` | List call logs |
+| `GET` | `/api/v1/calls/{id}` | Get call details |
+| `GET` | `/api/v1/calls/{id}/transcript` | Get full transcript |
+| `GET` | `/api/v1/calls/stats` | Call statistics |
+| `WS` | `/ws/dashboard` | Real-time dashboard events |
+| `WS` | `/ws/calls` | Real-time call events |
 
-### Calls & Dashboard
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| `GET` | `/api/v1/calls/` | List call logs | Bearer |
-| `GET` | `/api/v1/calls/{id}/transcript` | Get full transcript | Bearer |
-| `GET` | `/api/v1/dashboard/stats` | Dashboard statistics | Bearer |
-| `WS` | `/ws/dashboard` | Real-time dashboard updates | — |
-
----
-
-## 🗄️ MongoDB Collections
-
-| Collection | Documents | Key Fields |
-|------------|-----------|------------|
-| `users` | Admin/staff accounts | email, role, hashed_password |
-| `patients` | Patient records | patient_id, phone, DOB, verified |
-| `doctors` | Doctor profiles | employee_id, specialization, schedule |
-| `appointments` | All bookings | patient/doctor, date, time_slot, status |
-| `call_logs` | Voice call metadata | call_id, duration, intent, outcome |
-| `transcripts` | Conversation history | call_id, entries[speaker, text] |
-| `notifications` | System alerts | title, type, read status |
+### Dashboard & Admin
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/dashboard/stats` | Dashboard KPIs |
+| `GET` | `/api/v1/dashboard/recent-appointments` | Recent appointments |
+| `GET` | `/api/v1/dashboard/recent-calls` | Recent calls |
+| `GET` | `/api/v1/audit/logs` | Audit trail |
+| `GET` | `/api/v1/ehr/sync-logs` | EHR sync history |
+| `GET` | `/api/v1/workflow/sessions` | Active FSM sessions |
 
 ---
 
-## 🧠 AI Function Calling
+## 🗄️ Database Schema
 
-The agent uses **OpenAI GPT-4o function calling** to perform real database operations during conversations:
+```
+MongoDB: aleem_ehr
+│
+├── users              # Admin/staff accounts (username, role, JWT)
+├── patients           # Patient records (patient_id, phone, DOB, verified)
+├── doctors            # Doctor profiles (employee_id, locations[], schedule{})
+├── appointments       # Bookings (patient/doctor, date, time_slot, status)
+├── call_logs          # Voice call metadata (duration, intent, outcome)
+├── transcripts        # Conversation history (role, content, timestamp)
+├── notifications      # System alerts (type, title, read status)
+├── audit_logs         # Full audit trail (action, user, resource, details)
+├── ehr_syncs          # EHR sync records (type, entity, status)
+└── workflow_sessions  # FSM session state (current_state, context)
+```
 
-| Function | Trigger | Action |
-|----------|---------|--------|
-| `verify_patient` | Patient provides phone + DOB | Checks DB, marks verified |
-| `check_availability` | "Is Dr. X available on...?" | Generates slots, filters booked |
-| `book_appointment` | "Book me at 10 AM" | Creates appointment + notification |
-| `reschedule_appointment` | "Move my appointment to..." | Updates date/time, checks conflicts |
-| `cancel_appointment` | "Cancel my appointment" | Sets status cancelled |
-| `list_doctors` | "What doctors do you have?" | Queries by specialization |
-| `get_patient_appointments` | "What are my appointments?" | Fetches active bookings |
+---
+
+## 🏥 Hospital Configuration
+
+| Setting | Value |
+|---------|-------|
+| **Operating Hours** | 3:00 PM — 12:00 AM (Midnight) |
+| **Break Time** | 8:00 PM — 9:00 PM |
+| **Slot Duration** | 30 minutes |
+| **Slots per Day** | 16 available (18 total minus break) |
+| **Branches** | Islamabad, Multan |
+| **Phone (SIP)** | 4406848838 |
+
+### Doctors
+
+| ID | Name | Specialization | Locations |
+|----|------|---------------|-----------|
+| DOC001 | Dr. Aleem | General Medicine | Islamabad, Multan |
+| DOC002 | Dr. Mohsin | General Medicine | Islamabad |
+| DOC003 | Dr. Zain | General Medicine | Multan |
+
+---
+
+## 📝 Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OPENAI_API_KEY` | OpenAI API key | Required |
+| `MONGO_URI` | MongoDB connection string | `mongodb://admin:aleemehr2024@localhost:27017/...` |
+| `MONGO_DB_NAME` | Database name | `aleem_ehr` |
+| `JWT_SECRET` | JWT signing secret | `change-me-in-production` |
+| `LIVEKIT_URL` | LiveKit server URL | `wss://...livekit.cloud` |
+| `LIVEKIT_API_KEY` | LiveKit API key | Required for voice |
+| `LIVEKIT_API_SECRET` | LiveKit API secret | Required for voice |
+| `REDIS_URL` | Redis connection | `redis://localhost:6379/0` |
+| `ADMIN_USERNAME` | Default admin user | `aleemehr` |
+| `ADMIN_PASSWORD` | Default admin password | `aleem811` |
+
+---
+
+## 🐳 Docker Services
+
+```yaml
+services:
+  mongodb:     # MongoDB 7 — Primary database (port 27017)
+  redis:       # Redis 7 — Cache + Celery broker (port 6379)
+  backend:     # FastAPI — API server (port 8000)
+  voice-agent: # LiveKit — Voice AI worker
+  celery:      # Celery — Async task worker
+  frontend:    # Next.js — Web UI (port 3000)
+  nginx:       # Nginx — Reverse proxy (port 80)
+```
+
+---
+
+## 🧪 Testing
+
+```bash
+cd backend
+pytest tests/ -v
+```
 
 ---
 
 ## 🔁 CI/CD Pipeline
 
-Every push and pull request triggers the **GitHub Actions pipeline**:
-
 ```
-Push / PR → Lint Python (Ruff) → Type Check (Pyright) → Backend Tests
-                                                              │
-                                           Lint Frontend (ESLint) → Build Check (Next.js)
+Push/PR → Lint (Ruff) → Type Check → Backend Tests → Frontend Build → ✅
 ```
 
-See [`.github/workflows/ci.yml`](.github/workflows/ci.yml) for the full configuration.
+See [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 
 ---
 
@@ -402,22 +671,31 @@ See [`.github/workflows/ci.yml`](.github/workflows/ci.yml) for the full configur
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
+3. Commit changes: `git commit -m 'feat: add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
 5. Open a Pull Request
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
 ---
 
 <div align="center">
 
-**Built with ❤️ by [Aleem Rana](https://github.com/aleemrana8)**
+<br/>
 
-⭐ Star this repo if you find it useful!
+**Built with 💙 by [Aleem Rana](https://github.com/aleemrana8)**
+
+<br/>
+
+<sub>AI-Native Healthcare Platform · 24-State FSM Voice Engine · Full EHR System · athenahealth-Inspired Admin Panel</sub>
+
+<br/>
+
+[![GitHub stars](https://img.shields.io/github/stars/aleemrana8/Aleem-Voice-Agent?style=social)](https://github.com/aleemrana8/Aleem-Voice-Agent)
+[![GitHub forks](https://img.shields.io/github/forks/aleemrana8/Aleem-Voice-Agent?style=social)](https://github.com/aleemrana8/Aleem-Voice-Agent/fork)
 
 </div>

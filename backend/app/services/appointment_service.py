@@ -27,6 +27,8 @@ from app.schemas.appointment import (
     TimeSlot,
 )
 from app.services.websocket_manager import ws_manager
+from app.services.ehr_service import ehr_service
+from app.services.audit_service import audit_service
 
 
 class AppointmentService:
@@ -45,6 +47,7 @@ class AppointmentService:
         reason: Optional[str] = None,
         booked_via: str = "dashboard",
         call_id: Optional[str] = None,
+        location: Optional[str] = None,
     ) -> Appointment:
         """Create a new appointment after validating patient, doctor, and slot."""
 
@@ -72,6 +75,7 @@ class AppointmentService:
             reason=reason,
             booked_via=booked_via,
             call_id=call_id,
+            location=location,
         )
         await appt.insert()
 
@@ -90,6 +94,21 @@ class AppointmentService:
             NotificationType.SUCCESS,
         )
         await self._broadcast("appointment_created", appt)
+
+        # EHR Integration sync
+        try:
+            await ehr_service.sync_appointment_created(appt)
+        except Exception as exc:
+            logger.warning("EHR sync failed for appointment {}: {}", appt.appointment_id, exc)
+
+        # Audit log
+        try:
+            await audit_service.log_appointment_booked(
+                appt.appointment_id, patient_id, doctor_id, booked_via, call_id
+            )
+        except Exception:
+            pass
+
         return appt
 
     # ────────────────────────────────────────────────
@@ -150,6 +169,21 @@ class AppointmentService:
             NotificationType.WARNING,
         )
         await self._broadcast("appointment_rescheduled", appt)
+
+        # EHR Integration sync
+        try:
+            await ehr_service.sync_appointment_rescheduled(appt)
+        except Exception as exc:
+            logger.warning("EHR sync failed for reschedule {}: {}", appt.appointment_id, exc)
+
+        # Audit log
+        try:
+            await audit_service.log_appointment_rescheduled(
+                appt.appointment_id, old_date, old_slot, new_date, new_time_slot
+            )
+        except Exception:
+            pass
+
         return appt
 
     # ────────────────────────────────────────────────
@@ -191,6 +225,21 @@ class AppointmentService:
             NotificationType.ERROR,
         )
         await self._broadcast("appointment_cancelled", appt)
+
+        # EHR Integration sync
+        try:
+            await ehr_service.sync_appointment_cancelled(appt)
+        except Exception as exc:
+            logger.warning("EHR sync failed for cancellation {}: {}", appt.appointment_id, exc)
+
+        # Audit log
+        try:
+            await audit_service.log_appointment_cancelled(
+                appt.appointment_id, reason or "", cancelled_by
+            )
+        except Exception:
+            pass
+
         return appt
 
     # ────────────────────────────────────────────────
@@ -277,10 +326,10 @@ class AppointmentService:
         booked_appts = await Appointment.find(
             Appointment.doctor_id == doctor_id,
             Appointment.date == target_date,
-            Appointment.status.is_in([
+            {"status": {"$in": [
                 AppointmentStatus.SCHEDULED.value,
                 AppointmentStatus.CONFIRMED.value,
-            ]),
+            ]}},
         ).to_list()
         booked_set = {a.time_slot for a in booked_appts}
 
@@ -569,11 +618,15 @@ class AppointmentService:
     def _generate_slots(
         start: str, end: str, slot_duration: int
     ) -> List[str]:
-        """Generate HH:MM time slots between start and end."""
+        """Generate HH:MM time slots between start and end.
+        Handles midnight (00:00) as end-of-day (24:00)."""
         start_h, start_m = map(int, start.split(":"))
         end_h, end_m = map(int, end.split(":"))
         cur = start_h * 60 + start_m
+        # Treat 00:00 as midnight (1440 minutes)
         end_min = end_h * 60 + end_m
+        if end_min <= cur:
+            end_min = 24 * 60  # midnight
         slots: List[str] = []
         while cur + slot_duration <= end_min:
             h, m = divmod(cur, 60)

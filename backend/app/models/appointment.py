@@ -29,6 +29,7 @@ class Appointment(Document):
     reason: Optional[str] = Field(None, max_length=500)
     status: AppointmentStatus = AppointmentStatus.SCHEDULED
     notes: Optional[str] = Field(None, max_length=1000)
+    location: Optional[str] = Field(None, max_length=100, description="Islamabad or Multan")
     booked_via: BookingSource = BookingSource.VOICE
     call_id: Optional[str] = None
     cancelled_at: Optional[datetime] = None
@@ -105,6 +106,7 @@ class AppointmentCreate(BaseModel):
     time_slot: str = Field(..., pattern=r"^\d{2}:\d{2}$")
     duration: int = Field(30, ge=5, le=180)
     reason: Optional[str] = Field(None, max_length=500)
+    location: Optional[str] = Field(None, max_length=100)
     booked_via: BookingSource = BookingSource.DASHBOARD
 
 
@@ -127,6 +129,7 @@ class AppointmentResponse(BaseModel):
     reason: Optional[str] = None
     status: AppointmentStatus
     booked_via: BookingSource
+    location: Optional[str] = None
     notes: Optional[str] = None
     cancelled_at: Optional[datetime] = None
     created_at: datetime
@@ -147,6 +150,7 @@ class AppointmentResponse(BaseModel):
             reason=appt.reason,
             status=appt.status,
             booked_via=appt.booked_via,
+            location=appt.location,
             notes=appt.notes,
             cancelled_at=appt.cancelled_at,
             created_at=appt.created_at,

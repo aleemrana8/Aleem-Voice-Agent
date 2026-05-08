@@ -49,6 +49,9 @@ class BookAppointmentRequest(BaseModel):
     call_id: Optional[str] = Field(
         None, description="Linked voice call ID (set automatically for voice bookings)"
     )
+    location: Optional[str] = Field(
+        None, max_length=100, description="Hospital location (Islamabad or Multan)"
+    )
 
 
 class RescheduleAppointmentRequest(BaseModel):
@@ -109,6 +112,7 @@ class AppointmentDetail(BaseModel):
     booked_via: BookingSource
     notes: Optional[str] = None
     call_id: Optional[str] = None
+    location: Optional[str] = None
     cancelled_at: Optional[datetime] = None
     cancelled_by: Optional[str] = None
     created_at: datetime
@@ -131,6 +135,7 @@ class AppointmentDetail(BaseModel):
             booked_via=doc.booked_via,
             notes=doc.notes,
             call_id=doc.call_id,
+            location=getattr(doc, 'location', None),
             cancelled_at=doc.cancelled_at,
             cancelled_by=doc.cancelled_by,
             created_at=doc.created_at,

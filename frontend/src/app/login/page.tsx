@@ -2,16 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mic } from "lucide-react";
+import { HeartPulse, ArrowRight, Sparkles } from "lucide-react";
 import { login } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,7 +22,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const data = await login(email, password);
+      const data = await login(username, password);
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("user", JSON.stringify(data.user));
       router.push("/dashboard");
@@ -34,53 +34,72 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary">
-            <Mic className="h-7 w-7 text-primary-foreground" />
+    <div className="min-h-screen flex items-center justify-center bg-[#060a14] relative overflow-hidden">
+      {/* Ambient */}
+      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-blue-500/[0.04] rounded-full blur-[120px]" />
+      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-cyan-500/[0.04] rounded-full blur-[120px]" />
+
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="relative z-10 w-full max-w-md mx-4"
+      >
+        <div className="glass rounded-2xl p-8 glow-blue">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 mb-4">
+              <HeartPulse className="w-7 h-7 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold">Aleem EHR System</h1>
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+              <span className="text-sm text-white/40">AI-Powered Hospital Management</span>
+            </div>
           </div>
-          <CardTitle className="text-2xl">Aleem Voice Agent</CardTitle>
-          <CardDescription>Sign in to Aleem EHR Dashboard</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-400">
                 {error}
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label className="text-white/60 text-xs uppercase tracking-wider">Username</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="admin@aleemehr.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                placeholder="aleemehr"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
+                className="h-12 bg-white/[0.04] border-white/[0.08] rounded-xl text-white placeholder:text-white/20 focus:border-blue-500/50"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label className="text-white/60 text-xs uppercase tracking-wider">Password</Label>
               <Input
-                id="password"
                 type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="h-12 bg-white/[0.04] border-white/[0.08] rounded-xl text-white placeholder:text-white/20 focus:border-blue-500/50"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign In"}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full h-12 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-xl font-semibold text-base shadow-lg shadow-blue-500/20"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>Sign In <ArrowRight className="w-4 h-4 ml-2" /></>
+              )}
             </Button>
           </form>
-          <p className="mt-4 text-center text-xs text-muted-foreground">
-            Default: admin@aleemehr.com / admin123
+          <p className="mt-6 text-center text-xs text-white/20">
+            Default: aleemehr / aleem811
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </motion.div>
     </div>
   );
 }

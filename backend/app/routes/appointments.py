@@ -60,6 +60,7 @@ async def book_appointment(
         reason=body.reason,
         booked_via=body.booked_via.value,
         call_id=body.call_id,
+        location=getattr(body, "location", None),
     )
     return AppointmentDetail.from_doc(appt)
 

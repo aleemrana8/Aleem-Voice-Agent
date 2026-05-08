@@ -24,18 +24,18 @@ export default function DashboardLayout({
 
   if (!mounted) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="flex h-screen items-center justify-center bg-[#060a14]">
+        <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-[#060a14]">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-y-auto p-6 bg-muted/30">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6 bg-[#060a14]">{children}</main>
       </div>
     </div>
   );

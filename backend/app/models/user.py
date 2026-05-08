@@ -16,7 +16,8 @@ from app.models.enums import UserRole
 # ── Document ────────────────────────────────────────
 class User(Document):
     uid: str = Field(default_factory=lambda: f"USR-{uuid.uuid4().hex[:8].upper()}")
-    email: Indexed(str, unique=True)
+    email: Optional[str] = None
+    username: Optional[Indexed(str)] = None
     hashed_password: str
     full_name: str = Field(..., min_length=2, max_length=100)
     role: UserRole = UserRole.STAFF
@@ -71,7 +72,8 @@ class UserLogin(BaseModel):
 class UserResponse(BaseModel):
     id: str
     uid: str
-    email: str
+    email: Optional[str] = None
+    username: Optional[str] = None
     full_name: str
     role: UserRole
     is_active: bool
@@ -84,6 +86,7 @@ class UserResponse(BaseModel):
             id=str(user.id),
             uid=user.uid,
             email=user.email,
+            username=user.username,
             full_name=user.full_name,
             role=user.role,
             is_active=user.is_active,
