@@ -103,13 +103,27 @@ class HospitalAgent(Agent):
 
         from app.models.call_log import CallLog
         from app.models.transcript import Transcript
+        from app.models.patient import Patient
 
         call_id = f"CALL-{uuid.uuid4().hex[:12].upper()}"
         self._call_id = call_id
 
+        # Extract caller phone from SIP participant attributes
+        caller_phone = "livekit-cloud"
+        source = "web"
+        if self.session and self.session.room_io:
+            participant = self.session.room_io.linked_participant
+            if participant:
+                attrs = participant.attributes or {}
+                # LiveKit sets sip.phoneNumber for SIP participants
+                sip_phone = attrs.get("sip.phoneNumber", "")
+                if sip_phone:
+                    caller_phone = sip_phone
+                    source = "telephony"
+
         call_log = CallLog(
             call_id=call_id,
-            caller_phone="livekit-cloud",
+            caller_phone=caller_phone,
             status="in_progress",
         )
         await call_log.insert()
@@ -117,7 +131,15 @@ class HospitalAgent(Agent):
         transcript = Transcript(call_id=call_id)
         await transcript.insert()
 
-        logger.info(f"Voice call started: {call_id}")
+        # Try to identify patient by phone for SIP calls
+        if source == "telephony" and caller_phone != "livekit-cloud":
+            patient = await Patient.find_one(Patient.phone == caller_phone)
+            if patient:
+                call_log.patient_id = patient.patient_id
+                call_log.patient_name = patient.full_name
+                await call_log.save()
+
+        logger.info(f"Voice call started: {call_id} from {caller_phone} ({source})")
 
         await self.session.generate_reply(
             instructions="Greet the patient warmly and ask how you can help them today."

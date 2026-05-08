@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     LIVEKIT_API_KEY: str = os.getenv("LIVEKIT_API_KEY", "")
     LIVEKIT_API_SECRET: str = os.getenv("LIVEKIT_API_SECRET", "")
 
+    # ── SIP / Telephony ────────────────────────────
+    SIP_TRUNK_ID: str = os.getenv("SIP_TRUNK_ID", "ST_JT7r83zg3brC")
+    SIP_PHONE_NUMBER: str = os.getenv("SIP_PHONE_NUMBER", "4406848838")
+
     # ── OpenAI ──────────────────────────────────────
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o")

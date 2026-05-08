@@ -2,6 +2,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.services.voice_agent import voice_agent_service
 from app.services.livekit_service import livekit_service
 from app.services.websocket_manager import ws_manager
+from app.core.config import settings
 from loguru import logger
 
 router = APIRouter(prefix="/voice", tags=["Voice Agent"])
@@ -23,6 +24,25 @@ async def livekit_connect(caller_phone: str = "web-user"):
     """Create a room + caller token for the LiveKit-based voice agent."""
     data = livekit_service.create_room_and_token(caller_phone)
     return data
+
+
+# ── Telephony ───────────────────────────────────────────────────────
+
+
+@router.get(
+    "/telephony/status",
+    summary="Get telephony configuration status",
+    description="Returns the SIP trunk and phone number configuration.",
+)
+async def telephony_status():
+    """Check current telephony / SIP configuration."""
+    return {
+        "sip_trunk_id": settings.SIP_TRUNK_ID,
+        "phone_number": settings.SIP_PHONE_NUMBER,
+        "livekit_url": settings.LIVEKIT_URL,
+        "agent_name": "aleem-voice-agent",
+        "status": "active" if settings.LIVEKIT_API_KEY else "not_configured",
+    }
 
 
 # ── Legacy REST / WS voice flow ─────────────────────────────────────
