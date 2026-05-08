@@ -1,58 +1,72 @@
 """
 Appointment business-logic service layer.
-Encapsulates appointment CRUD, slot validation, and notification dispatch
-so that routes and the voice agent share the same logic.
+
+Single source of truth for appointment CRUD, slot generation,
+conflict detection, and notification dispatch.  Shared by REST routes
+and the voice-agent pipeline.
 """
 
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import date as date_type, datetime, timezone
+from typing import Dict, List, Optional, Tuple
 
-from app.models.appointment import Appointment, AppointmentResponse
-from app.models.patient import Patient
-from app.models.doctor import Doctor
-from app.models.notification import Notification
-from app.services.websocket_manager import ws_manager
-from fastapi import HTTPException
+from bson import ObjectId
+from bson.errors import InvalidId
+from fastapi import HTTPException, status
 from loguru import logger
+
+from app.models.appointment import Appointment
+from app.models.doctor import Doctor, DoctorAvailability
+from app.models.enums import AppointmentStatus, NotificationType
+from app.models.notification import Notification
+from app.models.patient import Patient
+from app.schemas.appointment import (
+    AppointmentDetail,
+    AppointmentListItem,
+    AppointmentStatsResponse,
+    AvailabilityResponse,
+    TimeSlot,
+)
+from app.services.websocket_manager import ws_manager
 
 
 class AppointmentService:
-    # ── Create ──────────────────────────────────────
-    async def create(
+    """Encapsulates every appointment operation behind an async API."""
+
+    # ────────────────────────────────────────────────
+    #  Book
+    # ────────────────────────────────────────────────
+    async def book(
         self,
         patient_id: str,
         doctor_id: str,
-        date: str,
+        appt_date: str,
         time_slot: str,
         duration: int = 30,
         reason: Optional[str] = None,
         booked_via: str = "dashboard",
         call_id: Optional[str] = None,
     ) -> Appointment:
-        patient = await Patient.find_one(Patient.patient_id == patient_id)
-        if not patient:
-            raise HTTPException(status_code=404, detail="Patient not found")
+        """Create a new appointment after validating patient, doctor, and slot."""
 
-        doctor = await Doctor.find_one(Doctor.employee_id == doctor_id)
-        if not doctor:
-            raise HTTPException(status_code=404, detail="Doctor not found")
+        patient = await self._require_patient(patient_id)
+        doctor = await self._require_doctor(doctor_id)
 
-        # Slot conflict check
-        existing = await Appointment.find_one(
-            Appointment.doctor_id == doctor_id,
-            Appointment.date == date,
-            Appointment.time_slot == time_slot,
-            Appointment.status.is_in(["scheduled", "confirmed"]),
-        )
-        if existing:
-            raise HTTPException(status_code=409, detail="Time slot already booked")
+        # Validate the slot is within the doctor's schedule
+        await self._validate_slot_in_schedule(doctor, appt_date, time_slot)
+
+        # Conflict check (uses compound index)
+        if await Appointment.has_conflict(doctor_id, appt_date, time_slot):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Time slot {time_slot} on {appt_date} is already booked for Dr. {doctor.full_name}",
+            )
 
         appt = Appointment(
             patient_id=patient_id,
             doctor_id=doctor_id,
             patient_name=patient.full_name,
             doctor_name=doctor.full_name,
-            date=date,
+            date=appt_date,
             time_slot=time_slot,
             duration=duration,
             reason=reason,
@@ -62,24 +76,25 @@ class AppointmentService:
         await appt.insert()
 
         logger.info(
-            f"Appointment created: {patient.full_name} → {doctor.full_name} on {date} {time_slot}"
+            "Appointment booked | appt={} patient={} doctor={} date={} slot={}",
+            appt.appointment_id,
+            patient.full_name,
+            doctor.full_name,
+            appt_date,
+            time_slot,
         )
 
-        # Notification + broadcast
         await self._notify(
             "New Appointment",
-            f"{patient.full_name} booked with {doctor.full_name} on {date} at {time_slot}",
-            "success",
+            f"{patient.full_name} booked with Dr. {doctor.full_name} on {appt_date} at {time_slot}",
+            NotificationType.SUCCESS,
         )
-        await ws_manager.broadcast(
-            {
-                "type": "appointment_created",
-                "data": AppointmentResponse.from_doc(appt).model_dump(mode="json"),
-            }
-        )
+        await self._broadcast("appointment_created", appt)
         return appt
 
-    # ── Reschedule ──────────────────────────────────
+    # ────────────────────────────────────────────────
+    #  Reschedule
+    # ────────────────────────────────────────────────
     async def reschedule(
         self,
         appointment_id: str,
@@ -87,128 +102,464 @@ class AppointmentService:
         new_time_slot: str,
         reason: Optional[str] = None,
     ) -> Appointment:
-        appt = await Appointment.get(appointment_id)
-        if not appt:
-            raise HTTPException(status_code=404, detail="Appointment not found")
-        if appt.status in ("cancelled", "completed"):
+        """Move an existing appointment to a new date/time."""
+
+        appt = await self._require_appointment(appointment_id)
+
+        if appt.status in (
+            AppointmentStatus.CANCELLED,
+            AppointmentStatus.COMPLETED,
+            AppointmentStatus.NO_SHOW,
+        ):
             raise HTTPException(
-                status_code=400,
-                detail=f"Cannot reschedule {appt.status} appointment",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot reschedule an appointment with status '{appt.status.value}'",
             )
 
-        # Slot conflict
-        existing = await Appointment.find_one(
-            Appointment.doctor_id == appt.doctor_id,
-            Appointment.date == new_date,
-            Appointment.time_slot == new_time_slot,
-            Appointment.status.is_in(["scheduled", "confirmed"]),
-        )
-        if existing and str(existing.id) != appointment_id:
-            raise HTTPException(status_code=409, detail="New time slot already booked")
+        doctor = await self._require_doctor(appt.doctor_id)
+        await self._validate_slot_in_schedule(doctor, new_date, new_time_slot)
 
+        if await Appointment.has_conflict(
+            appt.doctor_id, new_date, new_time_slot, exclude_id=str(appt.id)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Time slot {new_time_slot} on {new_date} is already booked",
+            )
+
+        old_date, old_slot = appt.date, appt.time_slot
         appt.date = new_date
         appt.time_slot = new_time_slot
-        appt.status = "rescheduled"
-        appt.notes = reason or appt.notes
-        appt.updated_at = datetime.now(timezone.utc)
+        appt.status = AppointmentStatus.RESCHEDULED
+        if reason:
+            appt.notes = reason
         await appt.save()
 
-        logger.info(f"Appointment rescheduled: {appointment_id}")
+        logger.info(
+            "Appointment rescheduled | appt={} from={}/{} to={}/{}",
+            appt.appointment_id,
+            old_date,
+            old_slot,
+            new_date,
+            new_time_slot,
+        )
 
         await self._notify(
             "Appointment Rescheduled",
             f"{appt.patient_name}'s appointment moved to {new_date} at {new_time_slot}",
-            "warning",
+            NotificationType.WARNING,
         )
-        await ws_manager.broadcast(
-            {
-                "type": "appointment_rescheduled",
-                "data": AppointmentResponse.from_doc(appt).model_dump(mode="json"),
-            }
-        )
+        await self._broadcast("appointment_rescheduled", appt)
         return appt
 
-    # ── Cancel ──────────────────────────────────────
+    # ────────────────────────────────────────────────
+    #  Cancel
+    # ────────────────────────────────────────────────
     async def cancel(
         self,
         appointment_id: str,
         reason: Optional[str] = None,
+        cancelled_by: Optional[str] = None,
     ) -> Appointment:
-        appt = await Appointment.get(appointment_id)
-        if not appt:
-            raise HTTPException(status_code=404, detail="Appointment not found")
-        if appt.status == "cancelled":
-            raise HTTPException(status_code=400, detail="Already cancelled")
+        """Cancel an active appointment."""
 
-        appt.status = "cancelled"
-        appt.notes = reason or "Cancelled"
-        appt.updated_at = datetime.now(timezone.utc)
+        appt = await self._require_appointment(appointment_id)
+
+        if appt.status == AppointmentStatus.CANCELLED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Appointment is already cancelled",
+            )
+        if appt.status == AppointmentStatus.COMPLETED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot cancel a completed appointment",
+            )
+
+        appt.status = AppointmentStatus.CANCELLED
+        appt.cancelled_at = datetime.now(timezone.utc)
+        appt.cancelled_by = cancelled_by
+        if reason:
+            appt.notes = reason
         await appt.save()
 
-        logger.info(f"Appointment cancelled: {appointment_id}")
+        logger.info("Appointment cancelled | appt={}", appt.appointment_id)
 
         await self._notify(
             "Appointment Cancelled",
-            f"{appt.patient_name}'s appointment on {appt.date} has been cancelled",
-            "error",
+            f"{appt.patient_name}'s appointment on {appt.date} at {appt.time_slot} has been cancelled",
+            NotificationType.ERROR,
         )
-        await ws_manager.broadcast(
-            {
-                "type": "appointment_cancelled",
-                "data": AppointmentResponse.from_doc(appt).model_dump(mode="json"),
-            }
-        )
+        await self._broadcast("appointment_cancelled", appt)
         return appt
 
-    # ── Availability ────────────────────────────────
-    async def check_availability(self, doctor_id: str, date: str) -> dict:
-        doctor = await Doctor.find_one(Doctor.employee_id == doctor_id)
-        if not doctor:
-            raise HTTPException(status_code=404, detail="Doctor not found")
+    # ────────────────────────────────────────────────
+    #  Doctor Availability
+    # ────────────────────────────────────────────────
+    async def get_availability(
+        self, doctor_id: str, target_date: str
+    ) -> AvailabilityResponse:
+        """
+        Return every time slot for a doctor on *target_date* together with
+        its booking state.  Respects DoctorAvailability overrides (blocked
+        days, blocked slots, modified hours).
+        """
+        doctor = await self._require_doctor(doctor_id)
 
-        target_date = datetime.strptime(date, "%Y-%m-%d")
-        day_name = target_date.strftime("%A").lower()
+        dt = datetime.strptime(target_date, "%Y-%m-%d")
+        day_name = dt.strftime("%A").lower()
 
-        if day_name not in doctor.schedule:
-            return {
-                "doctor": doctor.full_name,
-                "date": date,
-                "available_slots": [],
-                "message": f"Doctor not available on {day_name}",
+        # Check for date-specific override
+        override = await DoctorAvailability.find_one(
+            DoctorAvailability.doctor_id == doctor_id,
+            DoctorAvailability.date == target_date,
+        )
+
+        # Doctor marked unavailable for this date
+        if override and not override.is_available:
+            return AvailabilityResponse(
+                doctor_id=doctor_id,
+                doctor_name=doctor.full_name,
+                date=target_date,
+                day=day_name,
+                is_working_day=False,
+                has_override=True,
+                message=override.reason or f"Doctor is not available on {target_date}",
+            )
+
+        # Determine working hours (override or weekly schedule)
+        if override and override.override_start and override.override_end:
+            start_str, end_str = override.override_start, override.override_end
+            slot_duration = (
+                doctor.schedule[day_name].slot_duration
+                if day_name in doctor.schedule
+                else 30
+            )
+            has_override = True
+        elif day_name in doctor.schedule:
+            sched = doctor.schedule[day_name]
+            start_str, end_str = sched.start, sched.end
+            slot_duration = sched.slot_duration
+            has_override = bool(override)
+        else:
+            return AvailabilityResponse(
+                doctor_id=doctor_id,
+                doctor_name=doctor.full_name,
+                date=target_date,
+                day=day_name,
+                is_working_day=False,
+                has_override=bool(override),
+                message=f"Doctor does not work on {day_name}s",
+            )
+
+        # Generate all slots
+        all_slots = self._generate_slots(start_str, end_str, slot_duration)
+
+        # Remove blocked slots from override
+        blocked_set: set = set()
+        if override and override.blocked_slots:
+            blocked_set = set(override.blocked_slots)
+
+        # Fetch booked slots from DB
+        booked_appts = await Appointment.find(
+            Appointment.doctor_id == doctor_id,
+            Appointment.date == target_date,
+            Appointment.status.is_in([
+                AppointmentStatus.SCHEDULED.value,
+                AppointmentStatus.CONFIRMED.value,
+            ]),
+        ).to_list()
+        booked_set = {a.time_slot for a in booked_appts}
+
+        unavailable = booked_set | blocked_set
+        slots = [
+            TimeSlot(time=s, available=(s not in unavailable)) for s in all_slots
+        ]
+
+        available_count = sum(1 for s in slots if s.available)
+        return AvailabilityResponse(
+            doctor_id=doctor_id,
+            doctor_name=doctor.full_name,
+            date=target_date,
+            day=day_name,
+            slots=slots,
+            available_count=available_count,
+            booked_count=len(booked_set),
+            total_count=len(all_slots),
+            is_working_day=True,
+            has_override=has_override,
+        )
+
+    # ────────────────────────────────────────────────
+    #  Get Single
+    # ────────────────────────────────────────────────
+    async def get_by_id(self, appointment_id: str) -> Appointment:
+        """Fetch a single appointment by its MongoDB _id or appointment_id."""
+        return await self._require_appointment(appointment_id)
+
+    # ────────────────────────────────────────────────
+    #  List / Filter
+    # ────────────────────────────────────────────────
+    async def list_appointments(
+        self,
+        *,
+        patient_id: Optional[str] = None,
+        doctor_id: Optional[str] = None,
+        appt_status: Optional[AppointmentStatus] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 50,
+    ) -> Tuple[List[Appointment], int]:
+        """Return filtered appointments with total count for pagination."""
+
+        query: Dict = {}
+        if patient_id:
+            query["patient_id"] = patient_id
+        if doctor_id:
+            query["doctor_id"] = doctor_id
+        if appt_status:
+            query["status"] = appt_status.value
+        if date_from or date_to:
+            date_filter: Dict = {}
+            if date_from:
+                date_filter["$gte"] = date_from
+            if date_to:
+                date_filter["$lte"] = date_to
+            query["date"] = date_filter
+
+        total = await Appointment.find(query).count()
+        items = (
+            await Appointment.find(query)
+            .sort("-date", "-time_slot")
+            .skip(skip)
+            .limit(limit)
+            .to_list()
+        )
+        return items, total
+
+    # ────────────────────────────────────────────────
+    #  Patient Appointments
+    # ────────────────────────────────────────────────
+    async def get_patient_appointments(
+        self,
+        patient_id: str,
+        *,
+        upcoming_only: bool = False,
+        skip: int = 0,
+        limit: int = 50,
+    ) -> Tuple[List[Appointment], int]:
+        """Get appointments for a specific patient."""
+
+        # Validate patient exists
+        await self._require_patient(patient_id)
+
+        query: Dict = {"patient_id": patient_id}
+        if upcoming_only:
+            today = date_type.today().isoformat()
+            query["date"] = {"$gte": today}
+            query["status"] = {
+                "$in": [
+                    AppointmentStatus.SCHEDULED.value,
+                    AppointmentStatus.CONFIRMED.value,
+                    AppointmentStatus.RESCHEDULED.value,
+                ]
             }
 
-        day_sched = doctor.schedule[day_name]
-        all_slots: List[str] = []
-        start_h, start_m = map(int, day_sched.start.split(":"))
-        end_h, end_m = map(int, day_sched.end.split(":"))
-        cur = start_h * 60 + start_m
-        end = end_h * 60 + end_m
-        while cur + day_sched.slot_duration <= end:
-            h, m = divmod(cur, 60)
-            all_slots.append(f"{h:02d}:{m:02d}")
-            cur += day_sched.slot_duration
+        total = await Appointment.find(query).count()
+        items = (
+            await Appointment.find(query)
+            .sort("-date", "-time_slot")
+            .skip(skip)
+            .limit(limit)
+            .to_list()
+        )
+        return items, total
 
-        booked = await Appointment.find(
-            Appointment.doctor_id == doctor_id,
-            Appointment.date == date,
-            Appointment.status.is_in(["scheduled", "confirmed"]),
-        ).to_list()
-        booked_set = {a.time_slot for a in booked}
-        available = [s for s in all_slots if s not in booked_set]
-
-        return {
-            "doctor": doctor.full_name,
-            "date": date,
-            "available_slots": available,
-            "total_slots": len(all_slots),
-            "booked_slots": len(booked_set),
+    # ────────────────────────────────────────────────
+    #  Appointment History
+    # ────────────────────────────────────────────────
+    async def get_history(
+        self,
+        *,
+        patient_id: Optional[str] = None,
+        doctor_id: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 50,
+    ) -> Tuple[List[Appointment], int]:
+        """
+        Past / terminal-state appointments (completed, cancelled, no_show).
+        Optionally filtered by patient or doctor.
+        """
+        query: Dict = {
+            "status": {
+                "$in": [
+                    AppointmentStatus.COMPLETED.value,
+                    AppointmentStatus.CANCELLED.value,
+                    AppointmentStatus.NO_SHOW.value,
+                ]
+            }
         }
+        if patient_id:
+            query["patient_id"] = patient_id
+        if doctor_id:
+            query["doctor_id"] = doctor_id
 
-    # ── Internal helpers ────────────────────────────
+        total = await Appointment.find(query).count()
+        items = (
+            await Appointment.find(query)
+            .sort("-date", "-time_slot")
+            .skip(skip)
+            .limit(limit)
+            .to_list()
+        )
+        return items, total
+
+    # ────────────────────────────────────────────────
+    #  Stats
+    # ────────────────────────────────────────────────
+    async def get_stats(self) -> AppointmentStatsResponse:
+        """Aggregate appointment statistics for the dashboard."""
+        today = date_type.today().isoformat()
+
+        total = await Appointment.count()
+        scheduled = await Appointment.find({"status": AppointmentStatus.SCHEDULED.value}).count()
+        confirmed = await Appointment.find({"status": AppointmentStatus.CONFIRMED.value}).count()
+        completed = await Appointment.find({"status": AppointmentStatus.COMPLETED.value}).count()
+        cancelled = await Appointment.find({"status": AppointmentStatus.CANCELLED.value}).count()
+        rescheduled = await Appointment.find({"status": AppointmentStatus.RESCHEDULED.value}).count()
+        no_show = await Appointment.find({"status": AppointmentStatus.NO_SHOW.value}).count()
+        today_count = await Appointment.find({"date": today}).count()
+
+        return AppointmentStatsResponse(
+            total=total,
+            scheduled=scheduled,
+            confirmed=confirmed,
+            completed=completed,
+            cancelled=cancelled,
+            rescheduled=rescheduled,
+            no_show=no_show,
+            today=today_count,
+        )
+
+    # ════════════════════════════════════════════════
+    #  Private helpers
+    # ════════════════════════════════════════════════
+
     @staticmethod
-    async def _notify(title: str, message: str, notif_type: str = "info"):
-        notif = Notification(title=title, message=message, type=notif_type)
-        await notif.insert()
+    async def _require_patient(patient_id: str) -> Patient:
+        patient = await Patient.find_one(Patient.patient_id == patient_id)
+        if not patient:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Patient '{patient_id}' not found",
+            )
+        return patient
+
+    @staticmethod
+    async def _require_doctor(doctor_id: str) -> Doctor:
+        doctor = await Doctor.find_one(Doctor.employee_id == doctor_id)
+        if not doctor:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Doctor '{doctor_id}' not found",
+            )
+        if not doctor.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Doctor '{doctor_id}' is no longer active",
+            )
+        return doctor
+
+    @staticmethod
+    async def _require_appointment(appointment_id: str) -> Appointment:
+        """Lookup by MongoDB ObjectId first, fall back to appointment_id field."""
+        appt = None
+        try:
+            appt = await Appointment.get(ObjectId(appointment_id))
+        except (InvalidId, Exception):
+            pass
+        if not appt:
+            appt = await Appointment.find_one(
+                Appointment.appointment_id == appointment_id
+            )
+        if not appt:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Appointment '{appointment_id}' not found",
+            )
+        return appt
+
+    @staticmethod
+    async def _validate_slot_in_schedule(
+        doctor: Doctor, appt_date: str, time_slot: str
+    ) -> None:
+        """Ensure the requested slot falls within the doctor's working hours."""
+        dt = datetime.strptime(appt_date, "%Y-%m-%d")
+        day_name = dt.strftime("%A").lower()
+
+        # Check override first
+        override = await DoctorAvailability.find_one(
+            DoctorAvailability.doctor_id == doctor.employee_id,
+            DoctorAvailability.date == appt_date,
+        )
+        if override:
+            if not override.is_available:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Doctor is not available on {appt_date}",
+                )
+            if time_slot in (override.blocked_slots or []):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Time slot {time_slot} is blocked on {appt_date}",
+                )
+
+        if day_name not in doctor.schedule and not (
+            override and override.override_start
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Doctor does not work on {day_name}s",
+            )
+
+    @staticmethod
+    def _generate_slots(
+        start: str, end: str, slot_duration: int
+    ) -> List[str]:
+        """Generate HH:MM time slots between start and end."""
+        start_h, start_m = map(int, start.split(":"))
+        end_h, end_m = map(int, end.split(":"))
+        cur = start_h * 60 + start_m
+        end_min = end_h * 60 + end_m
+        slots: List[str] = []
+        while cur + slot_duration <= end_min:
+            h, m = divmod(cur, 60)
+            slots.append(f"{h:02d}:{m:02d}")
+            cur += slot_duration
+        return slots
+
+    @staticmethod
+    async def _notify(
+        title: str, message: str, notif_type: NotificationType = NotificationType.INFO
+    ) -> None:
+        try:
+            notif = Notification(title=title, message=message, type=notif_type)
+            await notif.insert()
+        except Exception as exc:
+            logger.warning("Failed to create notification: {}", exc)
+
+    @staticmethod
+    async def _broadcast(event_type: str, appt: Appointment) -> None:
+        try:
+            await ws_manager.broadcast(
+                {
+                    "type": event_type,
+                    "data": AppointmentDetail.from_doc(appt).model_dump(mode="json"),
+                }
+            )
+        except Exception as exc:
+            logger.warning("Failed to broadcast {}: {}", event_type, exc)
 
 
 # Singleton

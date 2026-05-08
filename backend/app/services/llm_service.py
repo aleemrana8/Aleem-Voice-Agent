@@ -1,6 +1,7 @@
 import json
 from openai import AsyncOpenAI
 from typing import List, Dict, Optional
+from fastapi import HTTPException
 from app.core.config import settings
 from loguru import logger
 
@@ -308,158 +309,82 @@ class LLMService:
         }
 
     async def _fn_check_availability(self, doctor_id: str, date: str) -> dict:
-        from app.models.doctor import Doctor
-        from app.models.appointment import Appointment
-        from datetime import datetime as dt
+        from app.services.appointment_service import appointment_service
 
-        doctor = await Doctor.find_one(Doctor.employee_id == doctor_id)
-        if not doctor:
-            return {"error": "Doctor not found"}
-
-        target_date = dt.strptime(date, "%Y-%m-%d")
-        day_name = target_date.strftime("%A").lower()
-
-        if day_name not in doctor.schedule:
-            return {"available_slots": [], "message": f"Doctor not available on {day_name}"}
-
-        day_sched = doctor.schedule[day_name]
-        all_slots = []
-        start_h, start_m = map(int, day_sched.start.split(":"))
-        end_h, end_m = map(int, day_sched.end.split(":"))
-        cur = start_h * 60 + start_m
-        end = end_h * 60 + end_m
-        while cur + day_sched.slot_duration <= end:
-            h, m = divmod(cur, 60)
-            all_slots.append(f"{h:02d}:{m:02d}")
-            cur += day_sched.slot_duration
-
-        booked = await Appointment.find(
-            Appointment.doctor_id == doctor_id,
-            Appointment.date == date,
-            Appointment.status.is_in(["scheduled", "confirmed"]),
-        ).to_list()
-        booked_slots = {a.time_slot for a in booked}
-        available = [s for s in all_slots if s not in booked_slots]
-
-        return {
-            "doctor": doctor.full_name,
-            "date": date,
-            "available_slots": available,
-        }
+        try:
+            result = await appointment_service.get_availability(doctor_id, date)
+            return {
+                "doctor": result.doctor_name,
+                "date": result.date,
+                "available_slots": [s.time for s in result.slots if s.available],
+                "is_working_day": result.is_working_day,
+                "message": result.message or "",
+            }
+        except Exception as e:
+            return {"error": str(e)}
 
     async def _fn_book_appointment(
         self, patient_id: str, doctor_id: str, date: str, time_slot: str, reason: str = ""
     ) -> dict:
-        from app.models.patient import Patient
-        from app.models.doctor import Doctor
-        from app.models.appointment import Appointment
-        from app.models.notification import Notification
-        from app.services.websocket_manager import ws_manager
+        from app.services.appointment_service import appointment_service
 
-        patient = await Patient.find_one(Patient.patient_id == patient_id)
-        if not patient:
-            return {"error": "Patient not found"}
-        doctor = await Doctor.find_one(Doctor.employee_id == doctor_id)
-        if not doctor:
-            return {"error": "Doctor not found"}
-
-        existing = await Appointment.find_one(
-            Appointment.doctor_id == doctor_id,
-            Appointment.date == date,
-            Appointment.time_slot == time_slot,
-            Appointment.status.is_in(["scheduled", "confirmed"]),
-        )
-        if existing:
-            return {"error": "This time slot is already booked"}
-
-        appt = Appointment(
-            patient_id=patient_id,
-            doctor_id=doctor_id,
-            patient_name=patient.full_name,
-            doctor_name=doctor.full_name,
-            date=date,
-            time_slot=time_slot,
-            reason=reason,
-            booked_via="voice",
-        )
-        await appt.insert()
-
-        notif = Notification(
-            title="New Appointment (Voice)",
-            message=f"{patient.full_name} booked with {doctor.full_name} on {date} at {time_slot}",
-            type="success",
-        )
-        await notif.insert()
-
-        await ws_manager.broadcast(
-            {
-                "type": "appointment_created",
-                "data": {
-                    "patient_name": patient.full_name,
-                    "doctor_name": doctor.full_name,
-                    "date": date,
-                    "time_slot": time_slot,
-                },
+        try:
+            appt = await appointment_service.book(
+                patient_id=patient_id,
+                doctor_id=doctor_id,
+                appt_date=date,
+                time_slot=time_slot,
+                reason=reason,
+                booked_via="voice",
+                call_id=None,
+            )
+            return {
+                "success": True,
+                "appointment_id": appt.appointment_id,
+                "patient_name": appt.patient_name,
+                "doctor_name": appt.doctor_name,
+                "date": appt.date,
+                "time_slot": appt.time_slot,
             }
-        )
-
-        return {
-            "success": True,
-            "appointment_id": str(appt.id),
-            "patient_name": patient.full_name,
-            "doctor_name": doctor.full_name,
-            "date": date,
-            "time_slot": time_slot,
-        }
+        except HTTPException as e:
+            return {"error": e.detail}
+        except Exception as e:
+            return {"error": str(e)}
 
     async def _fn_reschedule_appointment(
         self, appointment_id: str, new_date: str, new_time_slot: str
     ) -> dict:
-        from app.models.appointment import Appointment
-        from datetime import datetime, timezone
+        from app.services.appointment_service import appointment_service
 
-        appt = await Appointment.get(appointment_id)
-        if not appt:
-            return {"error": "Appointment not found"}
-
-        existing = await Appointment.find_one(
-            Appointment.doctor_id == appt.doctor_id,
-            Appointment.date == new_date,
-            Appointment.time_slot == new_time_slot,
-            Appointment.status.is_in(["scheduled", "confirmed"]),
-        )
-        if existing and str(existing.id) != appointment_id:
-            return {"error": "New time slot is already booked"}
-
-        old_date, old_time = appt.date, appt.time_slot
-        appt.date = new_date
-        appt.time_slot = new_time_slot
-        appt.status = "rescheduled"
-        appt.updated_at = datetime.now(timezone.utc)
-        await appt.save()
-
-        return {
-            "success": True,
-            "old_date": old_date,
-            "old_time": old_time,
-            "new_date": new_date,
-            "new_time": new_time_slot,
-        }
+        try:
+            appt = await appointment_service.reschedule(
+                appointment_id=appointment_id,
+                new_date=new_date,
+                new_time_slot=new_time_slot,
+            )
+            return {
+                "success": True,
+                "new_date": appt.date,
+                "new_time": appt.time_slot,
+            }
+        except HTTPException as e:
+            return {"error": e.detail}
+        except Exception as e:
+            return {"error": str(e)}
 
     async def _fn_cancel_appointment(self, appointment_id: str, reason: str = "") -> dict:
-        from app.models.appointment import Appointment
-        from datetime import datetime, timezone
+        from app.services.appointment_service import appointment_service
 
-        appt = await Appointment.get(appointment_id)
-        if not appt:
-            return {"error": "Appointment not found"}
-
-        appt.status = "cancelled"
-        appt.notes = reason or "Cancelled via voice agent"
-        appt.updated_at = datetime.now(timezone.utc)
-        await appt.save()
-
-        return {"success": True, "cancelled_appointment": appointment_id}
+        try:
+            appt = await appointment_service.cancel(
+                appointment_id=appointment_id,
+                reason=reason or "Cancelled via voice agent",
+            )
+            return {"success": True, "cancelled_appointment": appt.appointment_id}
+        except HTTPException as e:
+            return {"error": e.detail}
+        except Exception as e:
+            return {"error": str(e)}
 
     async def _fn_list_doctors(self, specialization: str = "") -> dict:
         from app.models.doctor import Doctor
@@ -480,25 +405,29 @@ class LLMService:
         }
 
     async def _fn_get_patient_appointments(self, patient_id: str) -> dict:
-        from app.models.appointment import Appointment
+        from app.services.appointment_service import appointment_service
 
-        appts = await Appointment.find(
-            Appointment.patient_id == patient_id,
-            Appointment.status.is_in(["scheduled", "confirmed", "rescheduled"]),
-        ).to_list()
-        return {
-            "appointments": [
-                {
-                    "id": str(a.id),
-                    "doctor": a.doctor_name,
-                    "date": a.date,
-                    "time": a.time_slot,
-                    "status": a.status,
-                    "reason": a.reason or "",
-                }
-                for a in appts
-            ]
-        }
+        try:
+            items, _ = await appointment_service.get_patient_appointments(
+                patient_id, upcoming_only=True, limit=20
+            )
+            return {
+                "appointments": [
+                    {
+                        "id": a.appointment_id,
+                        "doctor": a.doctor_name,
+                        "date": a.date,
+                        "time": a.time_slot,
+                        "status": a.status.value if hasattr(a.status, "value") else a.status,
+                        "reason": a.reason or "",
+                    }
+                    for a in items
+                ]
+            }
+        except HTTPException as e:
+            return {"error": e.detail}
+        except Exception as e:
+            return {"error": str(e)}
 
     def get_history(self, call_id: str) -> List[Dict]:
         return self.conversation_history.get(call_id, [])

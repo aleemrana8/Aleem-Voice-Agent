@@ -52,8 +52,8 @@ async def recent_appointments(
         .limit(limit)
         .to_list()
     )
-    from app.models.appointment import AppointmentResponse
-    return [AppointmentResponse.from_doc(a) for a in appointments]
+    from app.schemas.appointment import AppointmentListItem
+    return [AppointmentListItem.from_doc(a) for a in appointments]
 
 
 @router.get("/recent-calls")

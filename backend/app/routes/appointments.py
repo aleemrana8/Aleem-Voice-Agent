@@ -1,229 +1,293 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
-from typing import List, Optional
-from datetime import datetime, timezone
-from app.models.appointment import (
-    Appointment,
-    AppointmentCreate,
-    AppointmentReschedule,
-    AppointmentResponse,
-)
-from app.models.patient import Patient
-from app.models.doctor import Doctor
-from app.models.notification import Notification
-from app.models.user import User
-from app.core.security import get_current_user
-from app.services.websocket_manager import ws_manager
+"""
+Appointment API router.
+
+All business logic lives in AppointmentService — this module is purely
+responsible for HTTP concerns: request parsing, auth, response formatting.
+"""
+
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Query
 from loguru import logger
+
+from app.core.security import get_current_user
+from app.models.enums import AppointmentStatus
+from app.models.user import User
+from app.schemas.appointment import (
+    AppointmentDetail,
+    AppointmentListItem,
+    AppointmentStatsResponse,
+    AvailabilityResponse,
+    BookAppointmentRequest,
+    CancelAppointmentRequest,
+    RescheduleAppointmentRequest,
+)
+from app.schemas.common import PaginatedResponse
+from app.services.appointment_service import appointment_service
 
 router = APIRouter(prefix="/appointments", tags=["Appointments"])
 
 
-@router.get("/", response_model=List[AppointmentResponse])
-async def list_appointments(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
-    status: Optional[str] = None,
-    date: Optional[str] = None,
-    doctor_id: Optional[str] = None,
-    patient_id: Optional[str] = None,
+# ────────────────────────────────────────────────────
+#  Book Appointment
+# ────────────────────────────────────────────────────
+@router.post(
+    "/",
+    response_model=AppointmentDetail,
+    status_code=201,
+    summary="Book a new appointment",
+    description=(
+        "Create an appointment after validating the patient, doctor, "
+        "schedule, and slot availability.  Returns **409** if the slot "
+        "is already occupied."
+    ),
+    responses={
+        201: {"description": "Appointment created successfully"},
+        404: {"description": "Patient or doctor not found"},
+        409: {"description": "Time-slot conflict"},
+    },
+)
+async def book_appointment(
+    body: BookAppointmentRequest,
     current_user: User = Depends(get_current_user),
 ):
-    query = {}
-    if status:
-        query["status"] = status
-    if date:
-        query["date"] = date
-    if doctor_id:
-        query["doctor_id"] = doctor_id
-    if patient_id:
-        query["patient_id"] = patient_id
-
-    appointments = (
-        await Appointment.find(query)
-        .sort("-created_at")
-        .skip(skip)
-        .limit(limit)
-        .to_list()
+    appt = await appointment_service.book(
+        patient_id=body.patient_id,
+        doctor_id=body.doctor_id,
+        appt_date=body.date,
+        time_slot=body.time_slot,
+        duration=body.duration,
+        reason=body.reason,
+        booked_via=body.booked_via.value,
+        call_id=body.call_id,
     )
-    return [AppointmentResponse.from_doc(a) for a in appointments]
+    return AppointmentDetail.from_doc(appt)
 
 
-@router.get("/{appointment_id}", response_model=AppointmentResponse)
+# ────────────────────────────────────────────────────
+#  Reschedule Appointment
+# ────────────────────────────────────────────────────
+@router.put(
+    "/{appointment_id}/reschedule",
+    response_model=AppointmentDetail,
+    summary="Reschedule an existing appointment",
+    description=(
+        "Move an active appointment to a new date/time.  Validates "
+        "the new slot against the doctor's schedule and existing bookings."
+    ),
+    responses={
+        200: {"description": "Appointment rescheduled"},
+        400: {"description": "Appointment cannot be rescheduled (terminal status)"},
+        404: {"description": "Appointment not found"},
+        409: {"description": "New time-slot conflict"},
+    },
+)
+async def reschedule_appointment(
+    appointment_id: str,
+    body: RescheduleAppointmentRequest,
+    current_user: User = Depends(get_current_user),
+):
+    appt = await appointment_service.reschedule(
+        appointment_id=appointment_id,
+        new_date=body.new_date,
+        new_time_slot=body.new_time_slot,
+        reason=body.reason,
+    )
+    return AppointmentDetail.from_doc(appt)
+
+
+# ────────────────────────────────────────────────────
+#  Cancel Appointment
+# ────────────────────────────────────────────────────
+@router.put(
+    "/{appointment_id}/cancel",
+    response_model=AppointmentDetail,
+    summary="Cancel an appointment",
+    description="Cancel an active appointment. Already cancelled or completed appointments cannot be cancelled.",
+    responses={
+        200: {"description": "Appointment cancelled"},
+        400: {"description": "Already cancelled or completed"},
+        404: {"description": "Appointment not found"},
+    },
+)
+async def cancel_appointment(
+    appointment_id: str,
+    body: CancelAppointmentRequest = CancelAppointmentRequest(),
+    current_user: User = Depends(get_current_user),
+):
+    appt = await appointment_service.cancel(
+        appointment_id=appointment_id,
+        reason=body.reason,
+        cancelled_by=body.cancelled_by or current_user.email,
+    )
+    return AppointmentDetail.from_doc(appt)
+
+
+# ────────────────────────────────────────────────────
+#  Get Doctor Availability
+# ────────────────────────────────────────────────────
+@router.get(
+    "/availability",
+    response_model=AvailabilityResponse,
+    summary="Get doctor availability for a date",
+    description=(
+        "Returns every time slot for the requested doctor on the given date, "
+        "including which slots are booked or blocked.  Accounts for "
+        "DoctorAvailability overrides (holidays, modified hours, blocked slots)."
+    ),
+    responses={
+        200: {"description": "Availability retrieved"},
+        404: {"description": "Doctor not found"},
+    },
+)
+async def get_availability(
+    doctor_id: str = Query(..., description="Doctor employee_id"),
+    date: str = Query(
+        ..., pattern=r"^\d{4}-\d{2}-\d{2}$", description="Date (YYYY-MM-DD)"
+    ),
+    current_user: User = Depends(get_current_user),
+):
+    return await appointment_service.get_availability(doctor_id, date)
+
+
+# ────────────────────────────────────────────────────
+#  Get Single Appointment
+# ────────────────────────────────────────────────────
+@router.get(
+    "/{appointment_id}",
+    response_model=AppointmentDetail,
+    summary="Get appointment details",
+    description="Retrieve full details for a single appointment by its ID (MongoDB _id or APT-XXXXXXXX).",
+    responses={
+        200: {"description": "Appointment details"},
+        404: {"description": "Appointment not found"},
+    },
+)
 async def get_appointment(
     appointment_id: str,
     current_user: User = Depends(get_current_user),
 ):
-    appt = await Appointment.get(appointment_id)
-    if not appt:
-        raise HTTPException(status_code=404, detail="Appointment not found")
-    return AppointmentResponse.from_doc(appt)
+    appt = await appointment_service.get_by_id(appointment_id)
+    return AppointmentDetail.from_doc(appt)
 
 
-@router.post("/", response_model=AppointmentResponse, status_code=201)
-async def create_appointment(
-    data: AppointmentCreate,
+# ────────────────────────────────────────────────────
+#  List Appointments (filterable)
+# ────────────────────────────────────────────────────
+@router.get(
+    "/",
+    response_model=PaginatedResponse[AppointmentListItem],
+    summary="List appointments",
+    description=(
+        "Paginated appointment list with optional filters: status, date range, "
+        "doctor, or patient."
+    ),
+)
+async def list_appointments(
+    status: Optional[AppointmentStatus] = Query(None, description="Filter by status"),
+    doctor_id: Optional[str] = Query(None, description="Filter by doctor"),
+    patient_id: Optional[str] = Query(None, description="Filter by patient"),
+    date_from: Optional[str] = Query(
+        None, pattern=r"^\d{4}-\d{2}-\d{2}$", description="Start date (inclusive)"
+    ),
+    date_to: Optional[str] = Query(
+        None, pattern=r"^\d{4}-\d{2}-\d{2}$", description="End date (inclusive)"
+    ),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
 ):
-    # Validate patient
-    patient = await Patient.find_one(Patient.patient_id == data.patient_id)
-    if not patient:
-        raise HTTPException(status_code=404, detail="Patient not found")
-
-    # Validate doctor
-    doctor = await Doctor.find_one(Doctor.employee_id == data.doctor_id)
-    if not doctor:
-        raise HTTPException(status_code=404, detail="Doctor not found")
-
-    # Check slot availability
-    existing = await Appointment.find_one(
-        Appointment.doctor_id == data.doctor_id,
-        Appointment.date == data.date,
-        Appointment.time_slot == data.time_slot,
-        Appointment.status.is_in(["scheduled", "confirmed"]),
+    items, total = await appointment_service.list_appointments(
+        patient_id=patient_id,
+        doctor_id=doctor_id,
+        appt_status=status,
+        date_from=date_from,
+        date_to=date_to,
+        skip=skip,
+        limit=limit,
     )
-    if existing:
-        raise HTTPException(status_code=409, detail="Time slot already booked")
-
-    appt = Appointment(
-        patient_id=data.patient_id,
-        doctor_id=data.doctor_id,
-        patient_name=patient.full_name,
-        doctor_name=doctor.full_name,
-        date=data.date,
-        time_slot=data.time_slot,
-        duration=data.duration,
-        reason=data.reason,
-        booked_via=data.booked_via,
-    )
-    await appt.insert()
-    logger.info(
-        f"Appointment created: {patient.full_name} with {doctor.full_name} on {data.date} at {data.time_slot}"
+    return PaginatedResponse[AppointmentListItem].build(
+        items=[AppointmentListItem.from_doc(a) for a in items],
+        total=total,
+        skip=skip,
+        limit=limit,
     )
 
-    # Create notification
-    notif = Notification(
-        title="New Appointment",
-        message=f"{patient.full_name} booked with {doctor.full_name} on {data.date} at {data.time_slot}",
-        type="success",
-    )
-    await notif.insert()
 
-    # Broadcast realtime update
-    await ws_manager.broadcast(
-        {
-            "type": "appointment_created",
-            "data": AppointmentResponse.from_doc(appt).model_dump(mode="json"),
-        }
-    )
-
-    return AppointmentResponse.from_doc(appt)
-
-
-@router.put("/{appointment_id}/reschedule", response_model=AppointmentResponse)
-async def reschedule_appointment(
-    appointment_id: str,
-    data: AppointmentReschedule,
+# ────────────────────────────────────────────────────
+#  Patient Appointments
+# ────────────────────────────────────────────────────
+@router.get(
+    "/patient/{patient_id}",
+    response_model=PaginatedResponse[AppointmentListItem],
+    summary="Get patient appointments",
+    description="All appointments for a specific patient. Set `upcoming_only=true` to see only future active appointments.",
+    responses={
+        200: {"description": "Patient appointments"},
+        404: {"description": "Patient not found"},
+    },
+)
+async def get_patient_appointments(
+    patient_id: str,
+    upcoming_only: bool = Query(False, description="Only upcoming active appointments"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
 ):
-    appt = await Appointment.get(appointment_id)
-    if not appt:
-        raise HTTPException(status_code=404, detail="Appointment not found")
-    if appt.status in ("cancelled", "completed"):
-        raise HTTPException(
-            status_code=400, detail=f"Cannot reschedule {appt.status} appointment"
-        )
-
-    # Check new slot availability
-    existing = await Appointment.find_one(
-        Appointment.doctor_id == appt.doctor_id,
-        Appointment.date == data.new_date,
-        Appointment.time_slot == data.new_time_slot,
-        Appointment.status.is_in(["scheduled", "confirmed"]),
+    items, total = await appointment_service.get_patient_appointments(
+        patient_id,
+        upcoming_only=upcoming_only,
+        skip=skip,
+        limit=limit,
     )
-    if existing and str(existing.id) != appointment_id:
-        raise HTTPException(status_code=409, detail="New time slot already booked")
-
-    appt.date = data.new_date
-    appt.time_slot = data.new_time_slot
-    appt.status = "rescheduled"
-    appt.notes = data.reason or appt.notes
-    appt.updated_at = datetime.now(timezone.utc)
-    await appt.save()
-
-    logger.info(f"Appointment rescheduled: {appointment_id}")
-
-    notif = Notification(
-        title="Appointment Rescheduled",
-        message=f"{appt.patient_name}'s appointment moved to {data.new_date} at {data.new_time_slot}",
-        type="warning",
+    return PaginatedResponse[AppointmentListItem].build(
+        items=[AppointmentListItem.from_doc(a) for a in items],
+        total=total,
+        skip=skip,
+        limit=limit,
     )
-    await notif.insert()
-
-    await ws_manager.broadcast(
-        {
-            "type": "appointment_rescheduled",
-            "data": AppointmentResponse.from_doc(appt).model_dump(mode="json"),
-        }
-    )
-    return AppointmentResponse.from_doc(appt)
 
 
-@router.put("/{appointment_id}/cancel", response_model=AppointmentResponse)
-async def cancel_appointment(
-    appointment_id: str,
-    reason: Optional[str] = None,
+# ────────────────────────────────────────────────────
+#  Appointment History
+# ────────────────────────────────────────────────────
+@router.get(
+    "/history/",
+    response_model=PaginatedResponse[AppointmentListItem],
+    summary="Appointment history",
+    description="Past appointments with terminal status (completed, cancelled, no-show). Filter by patient or doctor.",
+)
+async def appointment_history(
+    patient_id: Optional[str] = Query(None, description="Filter by patient"),
+    doctor_id: Optional[str] = Query(None, description="Filter by doctor"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
 ):
-    appt = await Appointment.get(appointment_id)
-    if not appt:
-        raise HTTPException(status_code=404, detail="Appointment not found")
-    if appt.status == "cancelled":
-        raise HTTPException(status_code=400, detail="Already cancelled")
-
-    appt.status = "cancelled"
-    appt.notes = reason or "Cancelled"
-    appt.updated_at = datetime.now(timezone.utc)
-    await appt.save()
-
-    logger.info(f"Appointment cancelled: {appointment_id}")
-
-    notif = Notification(
-        title="Appointment Cancelled",
-        message=f"{appt.patient_name}'s appointment on {appt.date} has been cancelled",
-        type="error",
+    items, total = await appointment_service.get_history(
+        patient_id=patient_id,
+        doctor_id=doctor_id,
+        skip=skip,
+        limit=limit,
     )
-    await notif.insert()
-
-    await ws_manager.broadcast(
-        {
-            "type": "appointment_cancelled",
-            "data": AppointmentResponse.from_doc(appt).model_dump(mode="json"),
-        }
+    return PaginatedResponse[AppointmentListItem].build(
+        items=[AppointmentListItem.from_doc(a) for a in items],
+        total=total,
+        skip=skip,
+        limit=limit,
     )
-    return AppointmentResponse.from_doc(appt)
 
 
-@router.get("/stats/summary")
-async def appointment_stats(current_user: User = Depends(get_current_user)):
-    """Dashboard summary statistics."""
-    total = await Appointment.count()
-    scheduled = await Appointment.find(
-        Appointment.status == "scheduled"
-    ).count()
-    completed = await Appointment.find(
-        Appointment.status == "completed"
-    ).count()
-    cancelled = await Appointment.find(
-        Appointment.status == "cancelled"
-    ).count()
-
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    today_count = await Appointment.find(Appointment.date == today).count()
-
-    return {
-        "total": total,
-        "scheduled": scheduled,
-        "completed": completed,
-        "cancelled": cancelled,
-        "today": today_count,
-    }
+# ────────────────────────────────────────────────────
+#  Stats
+# ────────────────────────────────────────────────────
+@router.get(
+    "/stats/summary",
+    response_model=AppointmentStatsResponse,
+    summary="Appointment statistics",
+    description="Aggregate counts broken down by status, including today's appointments.",
+)
+async def appointment_stats(
+    current_user: User = Depends(get_current_user),
+):
+    return await appointment_service.get_stats()

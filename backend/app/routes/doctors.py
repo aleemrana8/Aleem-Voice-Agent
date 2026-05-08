@@ -8,9 +8,9 @@ from app.models.doctor import (
     DoctorResponse,
     DoctorAvailabilityRequest,
 )
-from app.models.appointment import Appointment
 from app.models.user import User
 from app.core.security import get_current_user, get_current_admin
+from app.services.doctor_service import doctor_service
 from loguru import logger
 
 router = APIRouter(prefix="/doctors", tags=["Doctors"])
@@ -88,50 +88,15 @@ async def delete_doctor(
     logger.info(f"Doctor deactivated: {employee_id}")
 
 
-@router.post("/availability")
+@router.post(
+    "/availability",
+    summary="Check doctor availability",
+    description=(
+        "Returns available time slots for a doctor on a given date. "
+        "Accounts for DoctorAvailability overrides and existing bookings."
+    ),
+)
 async def check_availability(data: DoctorAvailabilityRequest):
     """Check available slots for a doctor on a given date.
     Used by both dashboard and voice agent."""
-    doctor = await Doctor.find_one(Doctor.employee_id == data.doctor_id)
-    if not doctor:
-        raise HTTPException(status_code=404, detail="Doctor not found")
-
-    # Determine the day of week
-    from datetime import datetime as dt
-
-    target_date = dt.strptime(data.date, "%Y-%m-%d")
-    day_name = target_date.strftime("%A").lower()
-
-    if day_name not in doctor.schedule:
-        return {"available_slots": [], "message": f"Doctor not available on {day_name}"}
-
-    day_schedule = doctor.schedule[day_name]
-
-    # Generate all possible slots
-    all_slots = []
-    start_hour, start_min = map(int, day_schedule.start.split(":"))
-    end_hour, end_min = map(int, day_schedule.end.split(":"))
-    current_minutes = start_hour * 60 + start_min
-    end_minutes = end_hour * 60 + end_min
-
-    while current_minutes + day_schedule.slot_duration <= end_minutes:
-        h, m = divmod(current_minutes, 60)
-        all_slots.append(f"{h:02d}:{m:02d}")
-        current_minutes += day_schedule.slot_duration
-
-    # Get booked slots for that day
-    booked = await Appointment.find(
-        Appointment.doctor_id == data.doctor_id,
-        Appointment.date == data.date,
-        Appointment.status.is_in(["scheduled", "confirmed"]),
-    ).to_list()
-    booked_slots = {a.time_slot for a in booked}
-
-    available = [s for s in all_slots if s not in booked_slots]
-    return {
-        "doctor": doctor.full_name,
-        "date": data.date,
-        "available_slots": available,
-        "total_slots": len(all_slots),
-        "booked_slots": len(booked_slots),
-    }
+    return await doctor_service.check_availability(data.doctor_id, data.date)
