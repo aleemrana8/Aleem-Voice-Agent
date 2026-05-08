@@ -1,11 +1,22 @@
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+
 from app.core.config import settings
 from app.core.database import Database
 from app.core.logging import setup_logging
+from app.middleware.request_id import RequestIDMiddleware
+from app.middleware.rate_limiter import RateLimiterMiddleware
+from app.middleware.error_handlers import register_error_handlers
 from app.services.websocket_manager import ws_manager
-from app.routes import auth, patients, doctors, appointments, calls, notifications, dashboard, voice
+from app.routes import (
+    auth, patients, doctors, appointments,
+    calls, notifications, dashboard, voice,
+)
 
 logger = setup_logging()
 
@@ -15,20 +26,23 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     await Database.connect()
+    logger.info("All systems operational")
     yield
     # Shutdown
     await Database.disconnect()
-    logger.info("Application shutdown")
+    logger.info("Application shutdown complete")
 
 
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="AI Hospital Voice Agent & EHR System",
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url="/redoc" if settings.DEBUG else None,
     lifespan=lifespan,
 )
 
-# CORS
+# ── Middleware Stack (order matters: last added = first executed) ──
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,
@@ -36,6 +50,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(RequestIDMiddleware)
+app.add_middleware(RateLimiterMiddleware)
+if not settings.DEBUG:
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=settings.ALLOWED_HOSTS,
+    )
+
+# ── Error Handlers ──────────────────────────────────
+register_error_handlers(app)
 
 # ── API Routes ──────────────────────────────────────
 api_prefix = "/api/v1"
@@ -56,7 +81,6 @@ async def dashboard_websocket(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
-            # Keep-alive / ping-pong
             if data == "ping":
                 await ws_manager.send_personal(websocket, {"type": "pong"})
     except WebSocketDisconnect:
@@ -64,10 +88,20 @@ async def dashboard_websocket(websocket: WebSocket):
 
 
 # ── Health Check ────────────────────────────────────
-@app.get("/health")
+@app.get("/health", tags=["Health"])
 async def health():
     return {
         "status": "healthy",
         "app": settings.APP_NAME,
         "version": settings.APP_VERSION,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.get("/", tags=["Root"])
+async def root():
+    return {
+        "app": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+        "docs": "/docs" if settings.DEBUG else "Disabled in production",
     }
