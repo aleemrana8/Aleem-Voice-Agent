@@ -35,11 +35,12 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "120"))
 
     # ── LiveKit ─────────────────────────────────────
-    LIVEKIT_URL: str = os.getenv("LIVEKIT_URL", "ws://localhost:7880")
-    LIVEKIT_API_KEY: str = os.getenv("LIVEKIT_API_KEY", "your-livekit-api-key")
-    LIVEKIT_API_SECRET: str = os.getenv(
-        "LIVEKIT_API_SECRET", "your-livekit-api-secret"
+    LIVEKIT_URL: str = os.getenv(
+        "LIVEKIT_URL",
+        "wss://aleem-voice-agent-44niowom.livekit.cloud",
     )
+    LIVEKIT_API_KEY: str = os.getenv("LIVEKIT_API_KEY", "")
+    LIVEKIT_API_SECRET: str = os.getenv("LIVEKIT_API_SECRET", "")
 
     # ── OpenAI ──────────────────────────────────────
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")

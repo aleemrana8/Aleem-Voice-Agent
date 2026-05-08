@@ -20,8 +20,9 @@ openai==1.52.0
 # ── Voice / Realtime ───────────────────────────────
 websockets==12.0
 livekit-api==0.7.1
-livekit-server-sdk==0.7.1
-pipecat-ai==0.0.40
+livekit-agents>=1.5.0
+livekit-plugins-openai>=1.1.0
+livekit-plugins-silero>=1.1.0
 
 # ── Audio Processing ───────────────────────────────
 numpy==1.26.4

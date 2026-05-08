@@ -7,6 +7,27 @@ from loguru import logger
 router = APIRouter(prefix="/voice", tags=["Voice Agent"])
 
 
+# ── LiveKit Cloud Agent ─────────────────────────────────────────────
+
+
+@router.post(
+    "/livekit/connect",
+    summary="Get LiveKit connection details",
+    description=(
+        "Returns a LiveKit room token and URL so the frontend can connect "
+        "to LiveKit Cloud. The server-side voice agent auto-joins via "
+        "agent dispatch."
+    ),
+)
+async def livekit_connect(caller_phone: str = "web-user"):
+    """Create a room + caller token for the LiveKit-based voice agent."""
+    data = livekit_service.create_room_and_token(caller_phone)
+    return data
+
+
+# ── Legacy REST / WS voice flow ─────────────────────────────────────
+
+
 @router.post("/call/start")
 async def start_call(caller_phone: str):
     """Initiate a new voice call session."""
