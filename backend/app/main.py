@@ -15,7 +15,7 @@ from app.middleware.error_handlers import register_error_handlers
 from app.services.websocket_manager import ws_manager
 from app.routes import (
     auth, patients, doctors, appointments,
-    calls, notifications, dashboard, voice,
+    calls, notifications, dashboard, voice, schedules,
 )
 
 logger = setup_logging()
@@ -72,6 +72,7 @@ app.include_router(calls.router, prefix=api_prefix)
 app.include_router(notifications.router, prefix=api_prefix)
 app.include_router(dashboard.router, prefix=api_prefix)
 app.include_router(voice.router, prefix=api_prefix)
+app.include_router(schedules.router, prefix=api_prefix)
 
 
 # ── Dashboard WebSocket ─────────────────────────────

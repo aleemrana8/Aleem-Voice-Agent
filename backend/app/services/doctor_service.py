@@ -57,7 +57,8 @@ class DoctorService:
                 "message": override.reason or f"Doctor not available on {date}",
             }
 
-        # Determine hours (override or weekly schedule)
+        # Determine hours and breaks (override or weekly schedule)
+        breaks = []
         if override and override.override_start and override.override_end:
             start_str, end_str = override.override_start, override.override_end
             slot_duration = (
@@ -65,10 +66,16 @@ class DoctorService:
                 if day_name in doctor.schedule
                 else 30
             )
+            breaks = (
+                override.override_breaks
+                if override.override_breaks
+                else (doctor.schedule[day_name].breaks if day_name in doctor.schedule else [])
+            )
         elif day_name in doctor.schedule:
             sched = doctor.schedule[day_name]
             start_str, end_str = sched.start, sched.end
             slot_duration = sched.slot_duration
+            breaks = sched.breaks
         else:
             return {
                 "doctor": doctor.full_name,
@@ -91,6 +98,13 @@ class DoctorService:
             all_slots.append(f"{h:02d}:{m:02d}")
             cur += slot_duration
 
+        # Build break ranges
+        break_ranges = [
+            (int(b.start[:2]) * 60 + int(b.start[3:]),
+             int(b.end[:2]) * 60 + int(b.end[3:]))
+            for b in breaks
+        ]
+
         # Blocked slots from override
         blocked_set: set = set()
         if override and override.blocked_slots:
@@ -107,8 +121,14 @@ class DoctorService:
         ).to_list()
         booked_set = {a.time_slot for a in booked}
 
+        # Exclude breaks, blocks, and booked slots
         unavailable = booked_set | blocked_set
-        available = [s for s in all_slots if s not in unavailable]
+        available = []
+        for s in all_slots:
+            s_min = int(s[:2]) * 60 + int(s[3:])
+            in_break = any(bs <= s_min < be for bs, be in break_ranges)
+            if not in_break and s not in unavailable:
+                available.append(s)
 
         return {
             "doctor": doctor.full_name,

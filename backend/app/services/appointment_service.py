@@ -202,7 +202,7 @@ class AppointmentService:
         """
         Return every time slot for a doctor on *target_date* together with
         its booking state.  Respects DoctorAvailability overrides (blocked
-        days, blocked slots, modified hours).
+        days, blocked slots, modified hours) and break times.
         """
         doctor = await self._require_doctor(doctor_id)
 
@@ -227,7 +227,8 @@ class AppointmentService:
                 message=override.reason or f"Doctor is not available on {target_date}",
             )
 
-        # Determine working hours (override or weekly schedule)
+        # Determine working hours and breaks (override or weekly schedule)
+        breaks = []
         if override and override.override_start and override.override_end:
             start_str, end_str = override.override_start, override.override_end
             slot_duration = (
@@ -236,10 +237,16 @@ class AppointmentService:
                 else 30
             )
             has_override = True
+            breaks = (
+                override.override_breaks
+                if override.override_breaks
+                else (doctor.schedule[day_name].breaks if day_name in doctor.schedule else [])
+            )
         elif day_name in doctor.schedule:
             sched = doctor.schedule[day_name]
             start_str, end_str = sched.start, sched.end
             slot_duration = sched.slot_duration
+            breaks = sched.breaks
             has_override = bool(override)
         else:
             return AvailabilityResponse(
@@ -254,6 +261,12 @@ class AppointmentService:
 
         # Generate all slots
         all_slots = self._generate_slots(start_str, end_str, slot_duration)
+
+        # Build break ranges for exclusion
+        break_ranges = [
+            (self._time_to_minutes(b.start), self._time_to_minutes(b.end))
+            for b in breaks
+        ]
 
         # Remove blocked slots from override
         blocked_set: set = set()
@@ -271,10 +284,14 @@ class AppointmentService:
         ).to_list()
         booked_set = {a.time_slot for a in booked_appts}
 
-        unavailable = booked_set | blocked_set
-        slots = [
-            TimeSlot(time=s, available=(s not in unavailable)) for s in all_slots
-        ]
+        slots = []
+        for s in all_slots:
+            t_min = self._time_to_minutes(s)
+            in_break = any(bs <= t_min < be for bs, be in break_ranges)
+            in_blocked = s in blocked_set
+            in_booked = s in booked_set
+            available = not (in_break or in_blocked or in_booked)
+            slots.append(TimeSlot(time=s, available=available))
 
         available_count = sum(1 for s in slots if s.available)
         return AvailabilityResponse(
@@ -494,7 +511,8 @@ class AppointmentService:
     async def _validate_slot_in_schedule(
         doctor: Doctor, appt_date: str, time_slot: str
     ) -> None:
-        """Ensure the requested slot falls within the doctor's working hours."""
+        """Ensure the requested slot falls within the doctor's working hours
+        and is not inside a break window."""
         dt = datetime.strptime(appt_date, "%Y-%m-%d")
         day_name = dt.strftime("%A").lower()
 
@@ -522,6 +540,30 @@ class AppointmentService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Doctor does not work on {day_name}s",
             )
+
+        # Check break windows
+        breaks = []
+        if override and override.override_breaks:
+            breaks = override.override_breaks
+        elif day_name in doctor.schedule:
+            breaks = doctor.schedule[day_name].breaks
+
+        if breaks:
+            slot_min = int(time_slot[:2]) * 60 + int(time_slot[3:])
+            for brk in breaks:
+                brk_start = int(brk.start[:2]) * 60 + int(brk.start[3:])
+                brk_end = int(brk.end[:2]) * 60 + int(brk.end[3:])
+                if brk_start <= slot_min < brk_end:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Time slot {time_slot} falls within {brk.label} break ({brk.start}-{brk.end})",
+                    )
+
+    @staticmethod
+    def _time_to_minutes(t: str) -> int:
+        """Convert HH:MM to minutes since midnight."""
+        h, m = map(int, t.split(":"))
+        return h * 60 + m
 
     @staticmethod
     def _generate_slots(

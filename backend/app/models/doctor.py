@@ -9,17 +9,36 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from beanie import Document, Indexed, before_event, Replace
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 from app.models.enums import DayOfWeek
 
 
 # ── Embedded Schemas ────────────────────────────────
+class BreakTime(BaseModel):
+    """A break window within a working day."""
+    start: str = Field(..., pattern=r"^\d{2}:\d{2}$", description="Break start HH:MM")
+    end: str = Field(..., pattern=r"^\d{2}:\d{2}$", description="Break end HH:MM")
+    label: str = Field("Break", max_length=50, description="e.g. Lunch, Prayer")
+
+    @field_validator("end")
+    @classmethod
+    def end_after_start(cls, v: str, info) -> str:
+        start = info.data.get("start")
+        if start and v <= start:
+            raise ValueError("Break end time must be after start time")
+        return v
+
+
 class DaySchedule(BaseModel):
     """A doctor's working hours for a single day."""
     start: str = Field(..., pattern=r"^\d{2}:\d{2}$", description="HH:MM")
     end: str = Field(..., pattern=r"^\d{2}:\d{2}$", description="HH:MM")
     slot_duration: int = Field(30, ge=5, le=120, description="Minutes per slot")
+    breaks: List[BreakTime] = Field(
+        default_factory=list,
+        description="Break windows excluded from slot generation",
+    )
 
     @field_validator("end")
     @classmethod
@@ -28,6 +47,24 @@ class DaySchedule(BaseModel):
         if start and v <= start:
             raise ValueError("End time must be after start time")
         return v
+
+    @model_validator(mode="after")
+    def breaks_within_hours(self):
+        """Ensure every break falls within the working window."""
+        for brk in self.breaks:
+            if brk.start < self.start or brk.end > self.end:
+                raise ValueError(
+                    f"Break {brk.start}-{brk.end} falls outside working hours {self.start}-{self.end}"
+                )
+        # Check for overlapping breaks
+        sorted_breaks = sorted(self.breaks, key=lambda b: b.start)
+        for i in range(1, len(sorted_breaks)):
+            if sorted_breaks[i].start < sorted_breaks[i - 1].end:
+                raise ValueError(
+                    f"Break {sorted_breaks[i].start}-{sorted_breaks[i].end} "
+                    f"overlaps with {sorted_breaks[i-1].start}-{sorted_breaks[i-1].end}"
+                )
+        return self
 
 
 # ── Doctor Document ─────────────────────────────────
@@ -85,18 +122,35 @@ class DoctorAvailability(Document):
     doctor_id: Indexed(str)
     date: str = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}$")
     is_available: bool = True
+    override_type: str = Field(
+        "custom",
+        description="holiday | leave | custom | extra_hours",
+    )
     override_start: Optional[str] = Field(None, pattern=r"^\d{2}:\d{2}$")
     override_end: Optional[str] = Field(None, pattern=r"^\d{2}:\d{2}$")
     blocked_slots: List[str] = Field(
         default_factory=list, description="List of HH:MM slots blocked"
     )
+    override_breaks: List[BreakTime] = Field(
+        default_factory=list,
+        description="Break overrides for this specific date",
+    )
     reason: Optional[str] = Field(None, max_length=200)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @field_validator("override_type")
+    @classmethod
+    def valid_override_type(cls, v: str) -> str:
+        allowed = {"holiday", "leave", "custom", "extra_hours"}
+        if v not in allowed:
+            raise ValueError(f"override_type must be one of: {', '.join(allowed)}")
+        return v
 
     class Settings:
         name = "doctor_availability"
         indexes = [
             [("doctor_id", 1), ("date", 1)],
+            "override_type",
         ]
 
 

@@ -43,7 +43,7 @@ def test_import_enums():
 def test_import_routes():
     """Verify all route modules import."""
     from app.routes import ALL_ROUTERS
-    assert len(ALL_ROUTERS) == 8
+    assert len(ALL_ROUTERS) == 9  # includes schedules
 
 
 def test_constants():

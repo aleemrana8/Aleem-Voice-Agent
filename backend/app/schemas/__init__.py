@@ -15,6 +15,17 @@ from app.schemas.appointment import (
     AvailabilityResponse,
     AppointmentStatsResponse,
 )
+from app.schemas.schedule import (
+    SetWeeklyScheduleRequest,
+    UpdateDayScheduleRequest,
+    WeeklyScheduleResponse,
+    CreateHolidayRequest,
+    CreateOverrideRequest,
+    OverrideResponse,
+    DayAvailabilityResponse,
+    WeeklyAvailabilityResponse,
+    MonthlyAvailabilityResponse,
+)
 
 __all__ = [
     "PaginatedResponse",
@@ -29,4 +40,13 @@ __all__ = [
     "AvailabilityRequest",
     "AvailabilityResponse",
     "AppointmentStatsResponse",
+    "SetWeeklyScheduleRequest",
+    "UpdateDayScheduleRequest",
+    "WeeklyScheduleResponse",
+    "CreateHolidayRequest",
+    "CreateOverrideRequest",
+    "OverrideResponse",
+    "DayAvailabilityResponse",
+    "WeeklyAvailabilityResponse",
+    "MonthlyAvailabilityResponse",
 ]
