@@ -17,6 +17,7 @@ from app.models.doctor import Doctor
 from app.models.patient import Patient
 from app.services.appointment_service import appointment_service
 from app.services.doctor_service import doctor_service
+from app.services.livekit_service import livekit_service
 
 router = APIRouter(prefix="/public", tags=["Public"])
 
@@ -110,3 +111,18 @@ async def book_public_appointment(body: PublicBookRequest):
         "status": appt.status.value if hasattr(appt.status, "value") else appt.status,
         "message": "Appointment booked successfully",
     }
+
+
+# ── LiveKit Voice Agent ─────────────────────────────
+
+
+@router.post("/livekit/connect")
+async def public_livekit_connect():
+    """Get a LiveKit room token to connect with the AI voice agent.
+    No authentication required — anyone can start a voice call."""
+    try:
+        data = livekit_service.create_room_and_token("web-user")
+        return data
+    except Exception as e:
+        logger.error(f"LiveKit connect error: {e}")
+        raise HTTPException(status_code=500, detail="Could not start voice call")

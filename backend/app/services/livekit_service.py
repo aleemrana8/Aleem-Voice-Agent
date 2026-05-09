@@ -1,4 +1,5 @@
 import uuid
+from datetime import timedelta
 from livekit import api as livekit_api
 from app.core.config import settings
 from loguru import logger
@@ -31,6 +32,7 @@ class LiveKitService:
             can_subscribe=can_subscribe,
         )
         token.with_grants(grant)
+        token.with_ttl(timedelta(hours=1))
         return token.to_jwt()
 
     def create_agent_token(self, room_name: str) -> str:
@@ -49,6 +51,7 @@ class LiveKitService:
             "room_name": room_name,
             "caller_token": caller_token,
             "livekit_url": self.url,
+            "agent_name": "aleem-hospital-agent",
         }
 
 

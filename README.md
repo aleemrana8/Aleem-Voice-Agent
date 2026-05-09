@@ -51,9 +51,10 @@ The platform includes a full **Electronic Health Record (EHR)** system with an *
 
 | Domain | Coverage |
 |--------|----------|
-| 🎙️ **Voice AI** | 24-state FSM receptionist, SIP telephony, real-time STT/TTS, concurrent call handling |
+| 🎙️ **Voice AI** | LiveKit Cloud agent (GPT-4o + Deepgram STT + Cartesia TTS), SIP telephony, live web calls via WebRTC |
 | 🏥 **Clinical** | Patient registry, doctor management, appointment scheduling, EHR sync |
 | 📊 **Operations** | Real-time dashboards, analytics, audit trails, multi-branch management |
+| 🌐 **Public Site** | 7 public pages (About, Doctors, Services, Contact, Appointment, Voice Call, FAQ) |
 | 🔐 **Security** | JWT authentication, bcrypt passwords, RBAC, rate limiting, CORS |
 | 🐳 **DevOps** | Docker Compose orchestration, CI/CD pipeline, Nginx reverse proxy |
 
@@ -121,17 +122,15 @@ farewell → error_recovery → fallback
 ### 🧠 AI & NLU Pipeline
 
 ```
-📞 Phone Call → LiveKit Room
+📞 Phone Call / 🌐 Web Call → LiveKit Cloud Room
     ↓
-🎙️ Whisper STT (Speech → Text)
+🎙️ Deepgram Nova-3 STT (Speech → Text)
     ↓
-🧠 GPT-4o Intent Extraction (13 intents, JSON output, temp=0.1)
+🧠 GPT-4o (Conversational AI with function calling)
     ↓
-⚙️ FSM Engine (24 states, context-aware transitions)
+🔊 Cartesia Sonic-3 TTS (Text → Speech)
     ↓
-🔊 OpenAI TTS "Alloy" (Text → Speech)
-    ↓
-📞 Audio back to caller
+📞 Audio back to caller / browser
 ```
 
 ### 🔒 Security & Compliance
@@ -142,11 +141,29 @@ farewell → error_recovery → fallback
 - Rate limiting (120 req/min configurable)
 - CORS whitelist enforcement
 
+### 🎤 Live Web Voice Call (WebRTC)
+- **Real-time browser-to-AI voice calls** via LiveKit Cloud + WebRTC
+- One-click "Start Live Call" on `/voice-call` page — no phone needed
+- `BarVisualizer` shows live agent audio waveform
+- Real-time transcript panel with role labels (You / AI Assistant)
+- Call timer, agent state display (Listening / Thinking / Speaking)
+- Mic toggle, volume control, and hang-up button
+- Public endpoint (`POST /api/v1/public/livekit/connect`) — no auth required
+
 ### 📞 SIP Telephony
 - LiveKit SIP Trunk integration
-- Inbound phone number: `4406848838`
+- Inbound phone number: `+92 440-684-8838`
 - Automatic room creation per call
 - Call metadata logging (duration, intent, outcome)
+
+### 🤖 LiveKit Cloud Voice Agent
+- **Deployed agent**: `aleem-hospital-agent` on LiveKit Cloud (ap-south region)
+- **LLM**: OpenAI GPT-4o — conversational hospital receptionist
+- **STT**: Deepgram Nova-3 — real-time speech recognition
+- **TTS**: Cartesia Sonic-3 — natural voice synthesis
+- **VAD**: Silero — voice activity detection for turn-taking
+- **Function tools**: `check_availability`, `book_appointment`, `get_doctors`
+- Auto-joins rooms via LiveKit agent dispatch
 
 ---
 
@@ -166,7 +183,7 @@ farewell → error_recovery → fallback
 │                 ▼                                 ▼                   │
 │                      BACKEND (FastAPI / Uvicorn)                     │
 │  ┌──────────────────────────────────────────────────────────────┐    │
-│  │  12 API Routers · 72 Endpoints · JWT Auth · Rate Limiter    │    │
+│  │  13 API Routers · 72+ Endpoints · JWT Auth · Rate Limiter   │    │
 │  ├──────────────────────────────────────────────────────────────┤    │
 │  │  ┌──────────────┐  ┌──────────────┐  ┌───────────────────┐  │    │
 │  │  │  Workflow     │  │  Scheduling  │  │  Intent           │  │    │
@@ -209,10 +226,11 @@ farewell → error_recovery → fallback
 | 📦 **Cache** | Redis 7, Celery | Caching, task queue, pub/sub |
 | 🔐 **Auth** | JWT (python-jose), bcrypt, OAuth2 | Token-based authentication |
 | 🧠 **AI/LLM** | OpenAI GPT-4o, temperature 0.1 | Intent extraction, entity recognition |
-| 🎙️ **Voice STT** | OpenAI Whisper | Real-time speech-to-text |
-| 🔊 **Voice TTS** | OpenAI TTS (Alloy voice) | Natural text-to-speech |
+| 🔍 **Voice STT** | Deepgram Nova-3 | Real-time speech-to-text |
+| 🔊 **Voice TTS** | Cartesia Sonic-3 | Natural text-to-speech |
 | 🎛️ **Voice Pipeline** | LiveKit Agents SDK, LiveKit Cloud | Real-time voice orchestration |
 | 📞 **Telephony** | LiveKit SIP Trunk | Inbound phone call handling |
+| 🌐 **Web Voice** | @livekit/components-react, livekit-client | Browser-based WebRTC voice calls |
 | 🔄 **Real-time** | WebSockets (FastAPI native) | Live dashboard updates |
 | 🐳 **Infrastructure** | Docker Compose, Nginx | Container orchestration, reverse proxy |
 | 🧪 **Testing** | pytest, pytest-asyncio, Ruff | Unit tests, async tests, linting |
@@ -286,7 +304,7 @@ Aleem-Voice-Agent/
 │       │   ├── ehr_sync.py           # EHR synchronization logs
 │       │   └── enums.py              # Shared enums (roles, statuses)
 │       │
-│       ├── routes/                   # 12 API router modules (72 endpoints)
+│       ├── routes/                   # 13 API router modules (72+ endpoints)
 │       │   ├── auth.py               # Login, register, profile
 │       │   ├── patients.py           # CRUD + phone verification
 │       │   ├── doctors.py            # CRUD + availability engine
@@ -294,11 +312,12 @@ Aleem-Voice-Agent/
 │       │   ├── calls.py              # Call logs + transcripts
 │       │   ├── notifications.py      # Notification management
 │       │   ├── dashboard.py          # Stats + recent activity
-│       │   ├── voice.py              # Voice endpoints
+│       │   ├── voice.py              # Voice + LiveKit endpoints
 │       │   ├── schedules.py          # Doctor schedule management
 │       │   ├── ehr.py                # EHR sync endpoints
 │       │   ├── audit.py              # Audit log queries
-│       │   └── workflow.py           # FSM workflow endpoints
+│       │   ├── workflow.py           # FSM workflow endpoints
+│       │   └── public.py             # Public API (no auth) + LiveKit connect
 │       │
 │       ├── services/                 # Business logic layer
 │       │   ├── workflow_engine.py    # ★ 24-state FSM conversation engine
@@ -331,6 +350,13 @@ Aleem-Voice-Agent/
 │       │   ├── page.tsx              # Landing page (hero + features)
 │       │   ├── globals.css           # Tailwind + glass morphism theme
 │       │   ├── login/page.tsx        # Authentication page
+│       │   ├── about/page.tsx        # Hospital about page
+│       │   ├── doctors/page.tsx      # Public doctor profiles
+│       │   ├── services/page.tsx     # Hospital services
+│       │   ├── contact/page.tsx      # Contact information
+│       │   ├── appointment/page.tsx  # Public appointment booking
+│       │   ├── voice-call/page.tsx   # ★ Live AI voice call (WebRTC)
+│       │   ├── faq/page.tsx          # Frequently asked questions
 │       │   │
 │       │   ├── dashboard/            # Staff Dashboard
 │       │   │   ├── layout.tsx        # Sidebar + header shell
@@ -363,6 +389,14 @@ Aleem-Voice-Agent/
 │           ├── api.ts               # Full API client (250+ lines)
 │           ├── types.ts             # TypeScript interfaces
 │           └── utils.ts             # cn() utility
+│
+├── aleem-voice-agent/                # ★ LiveKit Cloud Voice Agent
+│   ├── src/
+│   │   └── agent.py                  # GPT-4o agent (Deepgram STT + Cartesia TTS)
+│   ├── livekit.toml                  # Agent deployment config
+│   ├── pyproject.toml                # Python dependencies (uv)
+│   ├── Dockerfile                    # Cloud deployment image
+│   └── tests/                        # Agent tests
 │
 └── LICENSE                          # MIT License
 ```
@@ -427,6 +461,7 @@ npm run dev
 | Service | URL |
 |---------|-----|
 | 🖥️ Landing Page | [http://localhost:3000](http://localhost:3000) |
+| 🎤 Live Voice Call | [http://localhost:3000/voice-call](http://localhost:3000/voice-call) |
 | 📊 Staff Dashboard | [http://localhost:3000/dashboard](http://localhost:3000/dashboard) |
 | 🏥 Admin Panel | [http://localhost:3000/admin](http://localhost:3000/admin) |
 | ⚡ API Server | [http://localhost:8000](http://localhost:8000) |
@@ -519,7 +554,7 @@ The heart of the system — a deterministic conversation engine:
 
 ## 📡 API Reference
 
-> **72 endpoints** across 12 routers. Full interactive docs at `/docs` (Swagger) and `/redoc`.
+> **72+ endpoints** across 13 routers. Full interactive docs at `/docs` (Swagger) and `/redoc`.
 
 ### Authentication
 | Method | Endpoint | Description |
@@ -561,8 +596,19 @@ The heart of the system — a deterministic conversation engine:
 | `GET` | `/api/v1/calls/{id}` | Get call details |
 | `GET` | `/api/v1/calls/{id}/transcript` | Get full transcript |
 | `GET` | `/api/v1/calls/stats` | Call statistics |
+| `POST` | `/api/v1/voice/livekit/connect` | Get LiveKit room token (auth required) |
 | `WS` | `/ws/dashboard` | Real-time dashboard events |
 | `WS` | `/ws/calls` | Real-time call events |
+
+### Public API (No Auth)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/public/doctors` | List doctors (public) |
+| `GET` | `/api/v1/public/doctors/{id}/availability` | Doctor availability |
+| `POST` | `/api/v1/public/appointments` | Book appointment (public) |
+| `POST` | `/api/v1/public/livekit/connect` | Get LiveKit token for web voice call |
+| `GET` | `/api/v1/public/services` | Hospital services |
+| `GET` | `/api/v1/public/faq` | FAQ items |
 
 ### Dashboard & Admin
 | Method | Endpoint | Description |
