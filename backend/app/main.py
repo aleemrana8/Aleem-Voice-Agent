@@ -20,7 +20,7 @@ from app.models.enums import UserRole
 from app.routes import (
     auth, patients, doctors, appointments,
     calls, notifications, dashboard, voice, schedules, ehr,
-    audit, workflow,
+    audit, workflow, public,
 )
 
 logger = setup_logging()
@@ -119,6 +119,7 @@ app.include_router(schedules.router, prefix=api_prefix)
 app.include_router(ehr.router, prefix=api_prefix)
 app.include_router(audit.router, prefix=api_prefix)
 app.include_router(workflow.router, prefix=api_prefix)
+app.include_router(public.router, prefix=api_prefix)
 
 
 # ── Dashboard WebSocket ─────────────────────────────

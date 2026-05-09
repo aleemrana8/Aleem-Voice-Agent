@@ -93,6 +93,9 @@ class DoctorService:
         end_h, end_m = map(int, end_str.split(":"))
         cur = start_h * 60 + start_m
         end_mins = end_h * 60 + end_m
+        # Handle midnight crossing (e.g., 00:00 means 24:00)
+        if end_mins <= start_h * 60 + start_m:
+            end_mins = 24 * 60  # treat 00:00 as 24:00
         while cur + slot_duration <= end_mins:
             h, m = divmod(cur, 60)
             all_slots.append(f"{h:02d}:{m:02d}")

@@ -9,6 +9,7 @@ from app.routes import (
     dashboard,
     voice,
     schedules,
+    public,
 )
 
 ALL_ROUTERS = [
@@ -21,6 +22,7 @@ ALL_ROUTERS = [
     dashboard.router,
     voice.router,
     schedules.router,
+    public.router,
 ]
 
 __all__ = [
@@ -33,5 +35,6 @@ __all__ = [
     "dashboard",
     "voice",
     "schedules",
+    "public",
     "ALL_ROUTERS",
 ]

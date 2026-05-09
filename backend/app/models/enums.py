@@ -46,6 +46,7 @@ class BookingSource(StrEnum):
     VOICE = "voice"
     DASHBOARD = "dashboard"
     API = "api"
+    WEBSITE = "website"
 
 
 # ── Call Log ────────────────────────────────────────

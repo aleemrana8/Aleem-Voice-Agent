@@ -223,30 +223,35 @@ export async function publicRequest<T>(path: string): Promise<T> {
 }
 
 export function getPublicDoctors() {
-  return publicRequest<any[]>("/doctors/");
+  return publicRequest<any[]>("/public/doctors");
 }
 
 export function checkPublicAvailability(doctorId: string, date: string) {
-  return fetch(`${API_V1}/doctors/availability`, {
+  return fetch(`${API_V1}/public/availability`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ doctor_id: doctorId, date }),
-  }).then(r => r.json());
+  }).then(async (r) => {
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ detail: "Failed to check availability" }));
+      throw new Error(err.detail);
+    }
+    return r.json();
+  });
 }
 
 export function createPublicAppointment(data: {
-  patient_id?: string;
   doctor_id: string;
   date: string;
   time_slot: string;
   reason?: string;
-  patient_name?: string;
-  patient_phone?: string;
+  patient_name: string;
+  patient_phone: string;
 }) {
-  return fetch(`${API_V1}/appointments/`, {
+  return fetch(`${API_V1}/public/book`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...data, booked_via: "website" }),
+    body: JSON.stringify(data),
   }).then(async (r) => {
     if (!r.ok) {
       const err = await r.json().catch(() => ({ detail: "Booking failed" }));
