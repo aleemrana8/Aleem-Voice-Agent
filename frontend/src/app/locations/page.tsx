@@ -1,11 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Link from "next/link";
-import { MapPin, Phone, Clock, Users, Calendar, Mail, ArrowRight, Stethoscope } from "lucide-react";
+import {
+  MapPin, Clock, Phone, Users, Building2, Calendar,
+  ArrowRight, Sparkles, Navigation, Stethoscope,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/public/navbar";
 import { Footer } from "@/components/public/footer";
+import Link from "next/link";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -15,27 +18,39 @@ const fadeUp = {
 const locations = [
   {
     city: "Islamabad",
-    subtitle: "Capital Territory Branch",
-    address: "Aleem Hospital, Blue Area, Islamabad, Pakistan",
-    emoji: "🏛️",
-    doctors: [
-      { name: "Dr. Aleem", spec: "General Medicine" },
-      { name: "Dr. Mohsin", spec: "General Medicine" },
-    ],
+    address: "F-8/1 Markaz, Islamabad, Pakistan",
+    phone: "+92 440-684-8838",
     color: "from-blue-500 to-cyan-500",
-    mapEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d212645.5!2d72.9!3d33.6!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x38dfbfd07891722f%3A0x6059515c3f3f5!2sIslamabad!5e0!3m2!1sen!2spk!4v1234567890",
+    badge: "Main Branch",
+    doctors: [
+      { name: "Dr. Aleem Rehman", specialization: "Senior Physician", id: "DOC001" },
+      { name: "Dr. Mohsin Khan", specialization: "General Physician", id: "DOC002" },
+    ],
+    schedule: {
+      days: "Monday — Saturday",
+      hours: "3:00 PM — 12:00 AM",
+      break: "8:00 PM — 9:00 PM (Break)",
+      slotDuration: "30 minutes",
+    },
+    features: ["AI Voice Receptionist", "Walk-in Accepted", "Online Booking", "EHR System"],
   },
   {
     city: "Multan",
-    subtitle: "South Punjab Branch",
-    address: "Aleem Hospital, Bosan Road, Multan, Pakistan",
-    emoji: "🕌",
-    doctors: [
-      { name: "Dr. Aleem", spec: "General Medicine" },
-      { name: "Dr. Zain", spec: "General Medicine" },
-    ],
+    address: "Bosan Road, Multan, Pakistan",
+    phone: "+92 440-684-8838",
     color: "from-violet-500 to-purple-500",
-    mapEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d110848.5!2d71.4!3d30.2!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3e2c47c5c0e9ff1f%3A0x6059515c3f3f5!2sMultan!5e0!3m2!1sen!2spk!4v1234567890",
+    badge: "Branch Office",
+    doctors: [
+      { name: "Dr. Aleem Rehman", specialization: "Senior Physician", id: "DOC001" },
+      { name: "Dr. Zain Abbas", specialization: "General Physician", id: "DOC003" },
+    ],
+    schedule: {
+      days: "Monday — Saturday",
+      hours: "3:00 PM — 12:00 AM",
+      break: "8:00 PM — 9:00 PM (Break)",
+      slotDuration: "30 minutes",
+    },
+    features: ["AI Voice Receptionist", "Walk-in Accepted", "Online Booking", "EHR System"],
   },
 ];
 
@@ -44,122 +59,126 @@ export default function LocationsPage() {
     <div className="min-h-screen bg-[#060a14] text-white">
       <Navbar />
 
-      <section className="relative pt-32 pb-20 px-6">
+      {/* Hero */}
+      <section className="relative pt-32 pb-16 px-6">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-violet-500/[0.03] rounded-full blur-[120px]" />
+          <div className="absolute top-0 left-1/2 w-[500px] h-[500px] bg-teal-500/[0.03] rounded-full blur-[120px]" />
         </div>
         <div className="max-w-4xl mx-auto text-center relative">
-          <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/[0.08] border border-violet-500/[0.15] mb-6">
-            <MapPin className="w-4 h-4 text-violet-400" />
-            <span className="text-sm text-violet-300">Our Locations</span>
+          <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-500/[0.08] border border-teal-500/[0.15] mb-6">
+            <Navigation className="w-4 h-4 text-teal-400" />
+            <span className="text-sm text-teal-300">Our Locations</span>
           </motion.div>
           <motion.h1 initial="hidden" animate="visible" variants={fadeUp} custom={1} className="text-5xl md:text-6xl font-bold tracking-tight mb-6">
-            Two Branches, One<br /><span className="gradient-text">AI Network</span>
+            Visit Our <span className="gradient-text">Branches</span>
           </motion.h1>
           <motion.p initial="hidden" animate="visible" variants={fadeUp} custom={2} className="text-lg text-white/40 max-w-2xl mx-auto">
-            Visit us at Islamabad or Multan. Both branches connected through a unified AI system for seamless healthcare.
+            Two convenient locations in Islamabad and Multan, both powered by AI voice scheduling and modern healthcare systems.
           </motion.p>
         </div>
       </section>
 
+      {/* Locations */}
       <section className="py-10 px-6 pb-32">
-        <div className="max-w-5xl mx-auto space-y-12">
+        <div className="max-w-5xl mx-auto space-y-8">
           {locations.map((loc, i) => (
             <motion.div key={loc.city} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}>
-              <div className="glass rounded-2xl overflow-hidden hover:bg-white/[0.03] transition-all">
-                <div className={`h-2 bg-gradient-to-r ${loc.color}`} />
-                <div className="p-8 grid lg:grid-cols-2 gap-8">
+              <div className="glass rounded-2xl overflow-hidden">
+                {/* Header */}
+                <div className={`bg-gradient-to-r ${loc.color} p-6 flex items-center justify-between`}>
+                  <div className="flex items-center gap-3">
+                    <Building2 className="w-7 h-7 text-white" />
+                    <div>
+                      <h2 className="text-2xl font-bold text-white">{loc.city}</h2>
+                      <p className="text-white/70 text-sm">{loc.badge}</p>
+                    </div>
+                  </div>
+                  <Link href="/appointment">
+                    <Button size="sm" className="bg-white/20 backdrop-blur text-white border border-white/20 rounded-full hover:bg-white/30">
+                      Book Here <ArrowRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+
+                {/* Content grid */}
+                <div className="p-6 grid md:grid-cols-3 gap-6">
                   {/* Info */}
-                  <div>
-                    <div className="flex items-center gap-4 mb-6">
-                      <span className="text-5xl">{loc.emoji}</span>
-                      <div>
-                        <h2 className="text-2xl font-bold text-white">{loc.city}</h2>
-                        <p className="text-sm text-white/40">{loc.subtitle}</p>
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider">Location Details</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-2 text-sm text-white/50">
+                        <MapPin className="w-4 h-4 shrink-0 mt-0.5 text-white/30" />
+                        {loc.address}
                       </div>
-                      <div className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/[0.08] border border-emerald-500/[0.15]">
-                        <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-                        <span className="text-[10px] text-emerald-400 font-medium">Open Now</span>
+                      <div className="flex items-start gap-2 text-sm text-white/50">
+                        <Phone className="w-4 h-4 shrink-0 mt-0.5 text-white/30" />
+                        <a href={`tel:${loc.phone.replace(/[^+\d]/g, "")}`} className="hover:text-white transition">{loc.phone}</a>
                       </div>
-                    </div>
-
-                    <div className="space-y-4 mb-6">
-                      <div className="flex items-start gap-3 text-sm text-white/40">
-                        <MapPin className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-                        <span>{loc.address}</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm text-white/40">
-                        <Phone className="w-4 h-4 text-blue-400" />
-                        <span>+92 440-6848-838</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm text-white/40">
-                        <Mail className="w-4 h-4 text-blue-400" />
-                        <span>info@aleemhospital.com</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm text-white/40">
-                        <Clock className="w-4 h-4 text-blue-400" />
-                        <span>3:00 PM — 12:00 AM (Break: 8-9 PM)</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm text-white/40">
-                        <Calendar className="w-4 h-4 text-blue-400" />
-                        <span>30-minute appointment slots</span>
+                      <div className="flex items-start gap-2 text-sm text-white/50">
+                        <Clock className="w-4 h-4 shrink-0 mt-0.5 text-white/30" />
+                        <div>
+                          <p>{loc.schedule.days}</p>
+                          <p>{loc.schedule.hours}</p>
+                          <p className="text-white/25">{loc.schedule.break}</p>
+                          <p className="text-white/25">Slots: {loc.schedule.slotDuration}</p>
+                        </div>
                       </div>
                     </div>
+                  </div>
 
-                    <h4 className="text-sm font-semibold text-white/50 uppercase tracking-wider mb-3">Doctors at {loc.city}</h4>
-                    <div className="space-y-2 mb-6">
+                  {/* Doctors */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider">Doctors</h3>
+                    <div className="space-y-3">
                       {loc.doctors.map((doc) => (
-                        <div key={doc.name} className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
-                            <Stethoscope className="w-4 h-4 text-emerald-400" />
+                        <div key={doc.id} className="flex items-center gap-3 bg-white/[0.03] rounded-lg p-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
+                            <Stethoscope className="w-5 h-5 text-blue-400/60" />
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-white/70">{doc.name}</p>
-                            <p className="text-[11px] text-white/30">{doc.spec}</p>
-                          </div>
-                          <div className="ml-auto flex items-center gap-1">
-                            <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                            <span className="text-[10px] text-emerald-400/60">Active</span>
+                            <p className="text-sm font-medium text-white/80">{doc.name}</p>
+                            <p className="text-xs text-white/30">{doc.specialization}</p>
                           </div>
                         </div>
                       ))}
                     </div>
-
-                    <div className="flex gap-3">
-                      <Link href="/appointment" className="flex-1">
-                        <Button className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl h-11 font-semibold">
-                          Book at {loc.city} <ArrowRight className="w-4 h-4 ml-2" />
-                        </Button>
-                      </Link>
-                      <Link href="/voice-call">
-                        <Button variant="outline" className="border-white/[0.08] text-white/50 rounded-xl h-11">
-                          <Phone className="w-4 h-4" />
-                        </Button>
-                      </Link>
-                    </div>
                   </div>
 
-                  {/* Map placeholder */}
-                  <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] overflow-hidden min-h-[400px] flex items-center justify-center relative">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-violet-500/5" />
-                    <div className="text-center relative z-10">
-                      <MapPin className="w-12 h-12 text-blue-400/30 mx-auto mb-3" />
-                      <p className="text-lg font-semibold text-white/30">{loc.city}</p>
-                      <p className="text-sm text-white/15 mt-1">{loc.address}</p>
-                      <a
-                        href={`https://www.google.com/maps/search/Aleem+Hospital+${loc.city}+Pakistan`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-block mt-4 text-sm text-blue-400 hover:text-blue-300 transition-colors"
-                      >
-                        Open in Google Maps →
-                      </a>
+                  {/* Features + Map placeholder */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider">Features</h3>
+                    <div className="space-y-2">
+                      {loc.features.map((f) => (
+                        <div key={f} className="flex items-center gap-2 text-sm text-white/40">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/60" />
+                          {f}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="aspect-video rounded-lg bg-white/[0.03] border border-white/[0.05] flex items-center justify-center text-white/15 text-xs mt-4">
+                      <MapPin className="w-4 h-4 mr-1" /> Map — {loc.city}
                     </div>
                   </div>
                 </div>
               </div>
             </motion.div>
           ))}
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-20 px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0} className="text-3xl md:text-4xl font-bold mb-4">
+            Visit Us or Book Online
+          </motion.h2>
+          <motion.p initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={1} className="text-white/35 mb-8 max-w-lg mx-auto">
+            Schedule an appointment at any branch through our website or AI voice assistant.
+          </motion.p>
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={2} className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link href="/appointment"><Button size="lg" className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full px-8 h-12 font-semibold">Book Appointment <ArrowRight className="w-4 h-4 ml-2" /></Button></Link>
+            <Link href="/contact"><Button size="lg" variant="outline" className="rounded-full border-white/[0.08] text-white px-8 h-12">Contact Us</Button></Link>
+          </motion.div>
         </div>
       </section>
 

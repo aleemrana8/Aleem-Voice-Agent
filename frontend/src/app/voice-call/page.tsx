@@ -1,11 +1,15 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
-import { Phone, PhoneOff, Mic, MicOff, Volume2, Bot, Sparkles } from "lucide-react";
+import {
+  Phone, PhoneOff, Mic, MicOff, Volume2, Bot,
+  Sparkles, ArrowRight, MessageSquare, Activity,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/public/navbar";
 import { Footer } from "@/components/public/footer";
+import Link from "next/link";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -13,162 +17,237 @@ const fadeUp = {
 };
 
 const sampleConversation = [
-  { role: "ai", text: "Assalam-o-Alaikum! Welcome to Aleem Hospital. I'm your AI receptionist. How can I help you today?" },
-  { role: "user", text: "I want to book an appointment with Dr. Aleem in Islamabad." },
-  { role: "ai", text: "Sure! Let me check Dr. Aleem's availability at our Islamabad branch. When would you like to come in?" },
-  { role: "user", text: "Tomorrow at 4 PM would be great." },
-  { role: "ai", text: "Dr. Aleem has a slot available tomorrow at 4:00 PM. Can I have your name and phone number to confirm the booking?" },
+  { role: "ai", text: "Aleem Hospital, AI Receptionist speaking. How can I help you today?" },
+  { role: "user", text: "I'd like to book an appointment with Dr. Aleem." },
+  { role: "ai", text: "Sure! Dr. Aleem is available at both Islamabad and Multan. Which location do you prefer?" },
+  { role: "user", text: "Islamabad please." },
+  { role: "ai", text: "Dr. Aleem is available tomorrow at 3:30 PM, 4:00 PM, and 5:30 PM. Which slot works for you?" },
+  { role: "user", text: "4 PM would be great." },
+  { role: "ai", text: "I've booked your appointment with Dr. Aleem at Islamabad for tomorrow at 4:00 PM. Is there anything else?" },
+];
+
+const capabilities = [
+  "Book new appointments",
+  "Check doctor availability",
+  "Reschedule existing appointments",
+  "Cancel appointments",
+  "Get location & hours info",
+  "Answer common health queries",
 ];
 
 export default function VoiceCallPage() {
-  const [isCallActive, setIsCallActive] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [calling, setCalling] = useState(false);
+  const [muted, setMuted] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const [visibleMessages, setVisibleMessages] = useState(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [visibleMessages, setVisibleMessages] = useState<number>(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (isCallActive) {
-      intervalRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+    if (calling) {
+      timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
+      // Simulate messages appearing
       const msgInterval = setInterval(() => {
-        setVisibleMessages((v) => {
-          if (v >= sampleConversation.length) { clearInterval(msgInterval); return v; }
+        setVisibleMessages(v => {
+          if (v >= sampleConversation.length) {
+            clearInterval(msgInterval);
+            return v;
+          }
           return v + 1;
         });
       }, 2500);
-      return () => { if (intervalRef.current) clearInterval(intervalRef.current); clearInterval(msgInterval); };
+      return () => { clearInterval(timerRef.current!); clearInterval(msgInterval); };
     } else {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
       setElapsed(0);
       setVisibleMessages(0);
     }
-  }, [isCallActive]);
+  }, [calling]);
 
-  const formatElapsed = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
+  };
 
   return (
     <div className="min-h-screen bg-[#060a14] text-white">
       <Navbar />
 
-      <section className="relative pt-32 pb-20 px-6">
+      {/* Hero */}
+      <section className="relative pt-32 pb-10 px-6">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-emerald-500/[0.03] rounded-full blur-[120px]" />
+          <div className="absolute top-0 left-1/2 w-[500px] h-[500px] bg-emerald-500/[0.04] rounded-full blur-[120px]" />
         </div>
-        <div className="max-w-4xl mx-auto text-center relative">
+        <div className="max-w-3xl mx-auto text-center relative">
           <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/[0.08] border border-emerald-500/[0.15] mb-6">
             <Phone className="w-4 h-4 text-emerald-400" />
-            <span className="text-sm text-emerald-300">AI Voice Receptionist</span>
+            <span className="text-sm text-emerald-300">AI Voice Assistant</span>
           </motion.div>
-          <motion.h1 initial="hidden" animate="visible" variants={fadeUp} custom={1} className="text-5xl md:text-6xl font-bold tracking-tight mb-6">
-            Talk to Our <span className="gradient-text">AI Assistant</span>
+          <motion.h1 initial="hidden" animate="visible" variants={fadeUp} custom={1} className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
+            Call Our <span className="gradient-text">AI Receptionist</span>
           </motion.h1>
-          <motion.p initial="hidden" animate="visible" variants={fadeUp} custom={2} className="text-lg text-white/40 max-w-2xl mx-auto">
-            Call our AI receptionist to book appointments, check availability, or get hospital info — 24/7 instant response.
+          <motion.p initial="hidden" animate="visible" variants={fadeUp} custom={2} className="text-white/40 max-w-lg mx-auto">
+            Book appointments, check availability, and more — all through natural voice conversation with our AI.
           </motion.p>
         </div>
       </section>
 
-      <section className="py-10 px-6 pb-32">
-        <div className="max-w-2xl mx-auto">
-          <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-            <div className="glass rounded-2xl overflow-hidden">
-              {/* Call Header */}
-              <div className="p-6 border-b border-white/[0.04] text-center">
-                <div className={`w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center transition-all ${isCallActive ? "bg-gradient-to-br from-emerald-500 to-teal-500 shadow-lg shadow-emerald-500/20" : "bg-white/[0.06]"}`}>
-                  <Bot className={`w-10 h-10 ${isCallActive ? "text-white" : "text-white/30"}`} />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-1">AI Receptionist</h3>
-                <p className="text-sm text-white/30">Aleem Hospital · +92 440-6848-838</p>
-                {isCallActive && (
-                  <div className="flex items-center justify-center gap-2 mt-3">
-                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                    <span className="text-sm text-emerald-400 font-mono">{formatElapsed(elapsed)}</span>
-                  </div>
+      {/* Call Interface */}
+      <section className="py-10 px-6">
+        <div className="max-w-4xl mx-auto grid lg:grid-cols-2 gap-8">
+          {/* Phone UI */}
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0}>
+            <div className="glass rounded-2xl p-8 text-center">
+              {/* Waveform */}
+              <div className="relative w-32 h-32 mx-auto mb-6">
+                <div className={`absolute inset-0 rounded-full ${calling ? "bg-emerald-500/10" : "bg-blue-500/10"} transition-colors`} />
+                {calling && (
+                  <>
+                    <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0, 0.3] }} transition={{ duration: 2, repeat: Infinity }} className="absolute inset-0 rounded-full bg-emerald-500/20" />
+                    <motion.div animate={{ scale: [1, 1.3, 1], opacity: [0.2, 0, 0.2] }} transition={{ duration: 2, repeat: Infinity, delay: 0.5 }} className="absolute inset-0 rounded-full bg-emerald-500/15" />
+                  </>
                 )}
+                <div className="absolute inset-4 rounded-full bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
+                  <Bot className={`w-12 h-12 ${calling ? "text-emerald-400" : "text-blue-400/60"}`} />
+                </div>
               </div>
 
-              {/* Waveform */}
-              {isCallActive && (
-                <div className="px-6 py-4 flex items-center justify-center gap-[3px]">
-                  {Array.from({ length: 40 }).map((_, i) => (
-                    <motion.div key={i}
-                      className="w-[3px] rounded-full bg-gradient-to-t from-emerald-500 to-teal-400"
-                      animate={{ height: isMuted ? 4 : [4, Math.random() * 30 + 8, 4] }}
-                      transition={{ duration: 0.5 + Math.random() * 0.5, repeat: Infinity, repeatType: "mirror", delay: i * 0.03 }}
+              {/* Status */}
+              <h3 className="text-lg font-semibold mb-1">
+                {calling ? "Connected to AI Receptionist" : "AI Receptionist"}
+              </h3>
+              <p className="text-sm text-white/30 mb-1">+92 440-684-8838</p>
+              {calling && (
+                <p className="text-xs text-emerald-400/60 mb-4 font-mono">{formatTime(elapsed)}</p>
+              )}
+
+              {/* Waveform bars */}
+              {calling && (
+                <div className="flex items-center justify-center gap-1 h-8 mb-6">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <motion.div
+                      key={i}
+                      animate={{ height: [8, 20 + Math.random() * 16, 8] }}
+                      transition={{ duration: 0.6 + Math.random() * 0.4, repeat: Infinity, delay: i * 0.05 }}
+                      className="w-1 rounded-full bg-emerald-400/40"
                     />
                   ))}
                 </div>
               )}
 
-              {/* Conversation */}
-              {isCallActive && visibleMessages > 0 && (
-                <div className="px-6 pb-4 max-h-[300px] overflow-y-auto space-y-3">
-                  {sampleConversation.slice(0, visibleMessages).map((msg, i) => (
-                    <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                      className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${msg.role === "user" ? "bg-blue-500/10 border border-blue-500/20 text-blue-200" : "bg-white/[0.04] border border-white/[0.06] text-white/60"}`}>
-                        {msg.text}
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-
               {/* Controls */}
-              <div className="p-6 border-t border-white/[0.04]">
-                <div className="flex items-center justify-center gap-6">
-                  {isCallActive && (
-                    <button onClick={() => setIsMuted(!isMuted)}
-                      className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${isMuted ? "bg-red-500/20 text-red-400" : "bg-white/[0.06] text-white/40 hover:bg-white/[0.1]"}`}>
-                      {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                    </button>
-                  )}
-                  <button onClick={() => setIsCallActive(!isCallActive)}
-                    className={`w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-lg ${isCallActive ? "bg-red-500 hover:bg-red-600 shadow-red-500/20" : "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-emerald-500/20"}`}>
-                    {isCallActive ? <PhoneOff className="w-6 h-6 text-white" /> : <Phone className="w-6 h-6 text-white" />}
+              <div className="flex items-center justify-center gap-4 mt-6">
+                {calling && (
+                  <button
+                    onClick={() => setMuted(!muted)}
+                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                      muted ? "bg-red-500/20 text-red-400" : "bg-white/[0.06] text-white/40 hover:bg-white/[0.1]"
+                    }`}
+                  >
+                    {muted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                   </button>
-                  {isCallActive && (
-                    <button className="w-12 h-12 rounded-full flex items-center justify-center bg-white/[0.06] text-white/40 hover:bg-white/[0.1] transition-all">
-                      <Volume2 className="w-5 h-5" />
-                    </button>
-                  )}
-                </div>
-                {!isCallActive && (
-                  <p className="text-center text-sm text-white/20 mt-4">
-                    Tap to start a simulated AI call demo
-                  </p>
+                )}
+
+                <button
+                  onClick={() => setCalling(!calling)}
+                  className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
+                    calling
+                      ? "bg-red-500 hover:bg-red-600 text-white"
+                      : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:opacity-90"
+                  }`}
+                >
+                  {calling ? <PhoneOff className="w-6 h-6" /> : <Phone className="w-6 h-6" />}
+                </button>
+
+                {calling && (
+                  <button className="w-12 h-12 rounded-full bg-white/[0.06] text-white/40 flex items-center justify-center hover:bg-white/[0.1]">
+                    <Volume2 className="w-5 h-5" />
+                  </button>
                 )}
               </div>
-            </div>
 
-            {/* Call via phone */}
-            <div className="mt-8 glass rounded-2xl p-6 text-center">
-              <div className="flex items-center justify-center gap-2 mb-3">
-                <Sparkles className="w-4 h-4 text-blue-400" />
-                <h4 className="text-sm font-semibold text-white/60">Call on Your Phone</h4>
+              {!calling && (
+                <p className="text-xs text-white/20 mt-4">Click the green button to start a demo call</p>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Conversation Preview */}
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={1}>
+            <div className="glass rounded-2xl p-6 h-full">
+              <div className="flex items-center gap-2 mb-4">
+                <MessageSquare className="w-4 h-4 text-white/30" />
+                <span className="text-sm text-white/40 font-medium">Conversation {calling ? "— Live" : "Preview"}</span>
+                {calling && <Activity className="w-3 h-3 text-emerald-400 animate-pulse ml-auto" />}
               </div>
-              <p className="text-sm text-white/30 mb-4">
-                For real AI-powered booking, call our number directly from your phone. The AI will handle everything.
-              </p>
-              <a href="tel:4406848838">
-                <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl px-8 h-11 font-semibold">
-                  <Phone className="w-4 h-4 mr-2" /> Call +92 440-6848-838
+
+              <div className="space-y-3 min-h-[300px]">
+                {(calling ? sampleConversation.slice(0, visibleMessages) : sampleConversation).map((msg, i) => (
+                  <motion.div
+                    key={i}
+                    initial={calling ? { opacity: 0, y: 10 } : false}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${
+                      msg.role === "user"
+                        ? "bg-blue-500/10 text-blue-200/70 rounded-br-sm"
+                        : "bg-white/[0.04] text-white/50 rounded-bl-sm"
+                    }`}>
+                      {msg.role === "ai" && <Bot className="w-3.5 h-3.5 text-emerald-400/50 inline mr-1.5" />}
+                      {msg.text}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Capabilities */}
+      <section className="py-16 px-6">
+        <div className="max-w-4xl mx-auto">
+          <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0} className="text-2xl font-bold text-center mb-8">
+            What Our AI Can Do
+          </motion.h2>
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {capabilities.map((cap, i) => (
+              <motion.div key={cap} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}>
+                <div className="glass rounded-xl p-4 flex items-center gap-3 hover:bg-white/[0.04] transition-all">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-4 h-4 text-emerald-400/60" />
+                  </div>
+                  <span className="text-sm text-white/50">{cap}</span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Real Phone CTA */}
+      <section className="py-16 px-6">
+        <div className="max-w-2xl mx-auto text-center">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0} className="glass rounded-2xl p-8">
+            <Phone className="w-10 h-10 text-emerald-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Call Now</h2>
+            <p className="text-white/35 mb-6 text-sm">Dial our AI receptionist directly on your phone:</p>
+            <a href="tel:+924406848838" className="text-3xl font-bold gradient-text tracking-wider mb-6 block">
+              +92 440-684-8838
+            </a>
+            <p className="text-xs text-white/20 mb-6">Available 3:00 PM — 12:00 AM (Break 8–9 PM)</p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <a href="tel:+924406848838">
+                <Button size="lg" className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full px-8 h-12 font-semibold">
+                  <Phone className="w-4 h-4 mr-2" /> Call AI Receptionist
                 </Button>
               </a>
-            </div>
-
-            {/* What AI Can Do */}
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              {[
-                "Book appointments",
-                "Check doctor availability",
-                "Get hospital info & hours",
-                "Cancel or reschedule",
-              ].map((item) => (
-                <div key={item} className="glass rounded-xl p-4 text-center">
-                  <p className="text-sm text-white/40">{item}</p>
-                </div>
-              ))}
+              <Link href="/appointment">
+                <Button size="lg" variant="outline" className="rounded-full border-white/[0.08] text-white px-8 h-12">
+                  Book Online Instead <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
             </div>
           </motion.div>
         </div>
