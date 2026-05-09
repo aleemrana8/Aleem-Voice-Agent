@@ -25,7 +25,7 @@ export default function LoginPage() {
       const data = await login(username, password);
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("user", JSON.stringify(data.user));
-      router.push("/dashboard");
+      router.push("/admin");
     } catch (err: any) {
       setError(err.message || "Login failed");
     } finally {

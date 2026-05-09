@@ -212,6 +212,50 @@ export function createCallsWebSocket(): WebSocket | null {
   return new WebSocket(`${wsUrl}/calls`);
 }
 
+// ── Public API (no auth required) ───────────────────
+export async function publicRequest<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_V1}${path}`);
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Request failed" }));
+    throw new Error(error.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export function getPublicDoctors() {
+  return publicRequest<any[]>("/doctors/");
+}
+
+export function checkPublicAvailability(doctorId: string, date: string) {
+  return fetch(`${API_V1}/doctors/availability`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ doctor_id: doctorId, date }),
+  }).then(r => r.json());
+}
+
+export function createPublicAppointment(data: {
+  patient_id?: string;
+  doctor_id: string;
+  date: string;
+  time_slot: string;
+  reason?: string;
+  patient_name?: string;
+  patient_phone?: string;
+}) {
+  return fetch(`${API_V1}/appointments/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...data, booked_via: "website" }),
+  }).then(async (r) => {
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ detail: "Booking failed" }));
+      throw new Error(err.detail);
+    }
+    return r.json();
+  });
+}
+
 // ── Audit Logs ──────────────────────────────────────
 export function getAuditLogs(params?: { resource_type?: string; action?: string; limit?: number }) {
   const query = new URLSearchParams();
