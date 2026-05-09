@@ -44,6 +44,17 @@ module.exports = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      animation: {
+        "float": "float 6s ease-in-out infinite",
+        "float-slow": "float-slow 8s ease-in-out infinite",
+        "shimmer": "shimmer 3s linear infinite",
+        "orbit": "orbit 20s linear infinite",
+        "pulse-slow": "pulse 3s ease-in-out infinite",
+      },
+      backgroundImage: {
+        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
+        "hero-mesh": "radial-gradient(at 20% 80%, rgba(59,130,246,0.08), transparent 50%), radial-gradient(at 80% 20%, rgba(6,182,212,0.06), transparent 50%)",
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],

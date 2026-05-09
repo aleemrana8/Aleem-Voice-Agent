@@ -1,109 +1,155 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
 import {
-  Calendar, Clock, Phone, ArrowRight, ArrowLeft,
-  CheckCircle2, Stethoscope, MapPin, Loader2, AlertCircle, Sparkles,
+  Calendar, Clock, User, Phone, FileText, CheckCircle2, ArrowRight,
+  ArrowLeft, Sparkles, Stethoscope, MapPin, Loader2, AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/public/navbar";
 import { Footer } from "@/components/public/footer";
-import { checkPublicAvailability, createPublicAppointment } from "@/lib/api";
+import { HeroBackground } from "@/components/public/animated-bg";
+import { getPublicDoctors, checkPublicAvailability, createPublicAppointment } from "@/lib/api";
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 40 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.7, ease: [0.22, 1, 0.36, 1] } })
+  hidden: { opacity: 0, y: 30 },
+  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.08, duration: 0.6, ease: [0.22, 1, 0.36, 1] } })
 };
 
-const doctors = [
-  { id: "DOC001", name: "Dr. Aleem Rehman", specialization: "Senior Physician", locations: ["Islamabad", "Multan"], color: "from-blue-500 to-cyan-500" },
-  { id: "DOC002", name: "Dr. Mohsin Khan", specialization: "General Physician", locations: ["Islamabad"], color: "from-violet-500 to-purple-500" },
-  { id: "DOC003", name: "Dr. Zain Abbas", specialization: "General Physician", locations: ["Multan"], color: "from-emerald-500 to-teal-500" },
+const stepVariants = {
+  enter: { opacity: 0, x: 40 },
+  center: { opacity: 1, x: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
+  exit: { opacity: 0, x: -40, transition: { duration: 0.25 } },
+};
+
+const steps = [
+  { label: "Doctor", icon: Stethoscope },
+  { label: "Date & Time", icon: Calendar },
+  { label: "Details", icon: User },
+  { label: "Confirm", icon: CheckCircle2 },
 ];
 
-const steps = ["Doctor", "Date & Time", "Details", "Confirm"];
+interface DoctorOption {
+  doctor_id: string;
+  name: string;
+  specialization: string;
+  locations: string[];
+}
 
 export default function AppointmentPage() {
   const [step, setStep] = useState(0);
-  const [selectedDoctor, setSelectedDoctor] = useState("");
-  const [selectedLocation, setSelectedLocation] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
-  const [selectedSlot, setSelectedSlot] = useState("");
-  const [patientName, setPatientName] = useState("");
-  const [patientPhone, setPatientPhone] = useState("");
-  const [reason, setReason] = useState("");
+  const [doctors, setDoctors] = useState<DoctorOption[]>([]);
   const [slots, setSlots] = useState<string[]>([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(true);
   const [loadingSlots, setLoadingSlots] = useState(false);
-  const [booking, setBooking] = useState(false);
-  const [booked, setBooked] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
-  const doctor = doctors.find(d => d.id === selectedDoctor);
-  const today = new Date().toISOString().split("T")[0];
+  const [form, setForm] = useState({
+    doctor_id: "",
+    doctorName: "",
+    date: "",
+    time_slot: "",
+    patient_name: "",
+    patient_phone: "",
+    reason: "",
+  });
 
   useEffect(() => {
-    if (selectedDoctor && selectedDate) {
-      setLoadingSlots(true);
-      setSlots([]);
-      setSelectedSlot("");
-      setError("");
-      checkPublicAvailability(selectedDoctor, selectedDate)
-        .then((data) => { setSlots(data.available_slots || []); setLoadingSlots(false); })
-        .catch(() => { setError("Could not load availability."); setLoadingSlots(false); });
-    }
-  }, [selectedDoctor, selectedDate]);
+    getPublicDoctors()
+      .then((data) => {
+        setDoctors(
+          data.map((d: any) => ({
+            doctor_id: d.doctor_id,
+            name: d.name,
+            specialization: d.specialization,
+            locations: d.locations || [],
+          }))
+        );
+      })
+      .catch(() => setError("Failed to load doctors"))
+      .finally(() => setLoadingDoctors(false));
+  }, []);
 
-  const canProceed = () => {
-    switch (step) {
-      case 0: return selectedDoctor && selectedLocation;
-      case 1: return selectedDate && selectedSlot;
-      case 2: return patientName.trim() && patientPhone.trim();
-      case 3: return true;
-      default: return false;
+  const loadSlots = useCallback(async (doctorId: string, date: string) => {
+    if (!doctorId || !date) return;
+    setLoadingSlots(true);
+    setSlots([]);
+    try {
+      const data = await checkPublicAvailability(doctorId, date);
+      setSlots(data.available_slots || []);
+    } catch {
+      setError("Failed to load available slots");
+    } finally {
+      setLoadingSlots(false);
     }
-  };
+  }, []);
 
-  const handleBook = async () => {
-    setBooking(true);
+  useEffect(() => {
+    if (form.doctor_id && form.date) {
+      loadSlots(form.doctor_id, form.date);
+    }
+  }, [form.doctor_id, form.date, loadSlots]);
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
     setError("");
     try {
-      await createPublicAppointment({ doctor_id: selectedDoctor, date: selectedDate, time_slot: selectedSlot, patient_name: patientName, patient_phone: patientPhone, reason: reason || undefined });
-      setBooked(true);
-    } catch (err: any) {
-      setError(err.message || "Booking failed.");
+      await createPublicAppointment({
+        doctor_id: form.doctor_id,
+        date: form.date,
+        time_slot: form.time_slot,
+        patient_name: form.patient_name,
+        patient_phone: form.patient_phone,
+        reason: form.reason,
+      });
+      setSuccess(true);
+    } catch (e: any) {
+      setError(e.message || "Booking failed");
     } finally {
-      setBooking(false);
+      setSubmitting(false);
     }
   };
 
-  if (booked) {
+  const canNext = () => {
+    if (step === 0) return !!form.doctor_id;
+    if (step === 1) return !!form.date && !!form.time_slot;
+    if (step === 2) return !!form.patient_name && !!form.patient_phone;
+    return true;
+  };
+
+  const today = new Date().toISOString().split("T")[0];
+
+  if (success) {
     return (
       <div className="min-h-screen bg-[#060a14] text-white">
         <Navbar />
-        <section className="pt-40 pb-32 px-6">
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="max-w-lg mx-auto text-center">
-            <div className="w-20 h-20 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="w-10 h-10 text-emerald-400" />
-            </div>
-            <h1 className="text-3xl font-bold mb-3">Appointment Booked!</h1>
-            <p className="text-white/35 mb-6">Your appointment has been successfully scheduled.</p>
-            <div className="glass-card rounded-xl p-6 text-left space-y-3 mb-8">
-              {[
-                ["Doctor", doctor?.name], ["Location", selectedLocation], ["Date", selectedDate],
-                ["Time", selectedSlot], ["Patient", patientName], ["Phone", patientPhone],
-                ...(reason ? [["Reason", reason]] : []),
-              ].map(([k, v]) => (
-                <div key={k as string} className="flex justify-between text-sm border-b border-white/[0.03] pb-2 last:border-0 last:pb-0">
-                  <span className="text-white/30">{k}</span><span className="text-white/60">{v}</span>
-                </div>
-              ))}
-            </div>
-            <Button onClick={() => { setBooked(false); setStep(0); setSelectedDoctor(""); setSelectedDate(""); setSelectedSlot(""); setPatientName(""); setPatientPhone(""); setReason(""); }}
-              className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full px-8 h-11">
-              Book Another Appointment
-            </Button>
-          </motion.div>
+        <section className="relative pt-32 pb-32 px-6 overflow-hidden">
+          <HeroBackground />
+          <div className="max-w-lg mx-auto text-center relative z-10">
+            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200 }}>
+              <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+              </div>
+            </motion.div>
+            <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-3xl font-bold mb-3">
+              Appointment <span className="gradient-text">Confirmed!</span>
+            </motion.h1>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="glass-card rounded-xl p-6 text-left space-y-3 mb-8">
+              <div className="flex justify-between text-sm"><span className="text-white/30">Doctor</span><span className="text-white/70">{form.doctorName}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-white/30">Date</span><span className="text-white/70">{form.date}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-white/30">Time</span><span className="text-white/70">{form.time_slot}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-white/30">Patient</span><span className="text-white/70">{form.patient_name}</span></div>
+            </motion.div>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="flex gap-3 justify-center">
+              <Button onClick={() => { setSuccess(false); setStep(0); setForm({ doctor_id: "", doctorName: "", date: "", time_slot: "", patient_name: "", patient_phone: "", reason: "" }); }} className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl px-6 h-11 font-semibold">
+                Book Another
+              </Button>
+              <a href="/"><Button variant="outline" className="border-white/[0.1] text-white/60 rounded-xl px-6 h-11">Go Home</Button></a>
+            </motion.div>
+          </div>
         </section>
         <Footer />
       </div>
@@ -111,192 +157,194 @@ export default function AppointmentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#060a14] text-white overflow-hidden">
+    <div className="min-h-screen bg-[#060a14] text-white">
       <Navbar />
 
       {/* Hero */}
-      <section className="relative pt-32 pb-10 px-6">
-        <div className="absolute inset-0 pointer-events-none">
-          <motion.div animate={{ scale: [1, 1.1, 1], opacity: [0.03, 0.05, 0.03] }} transition={{ duration: 10, repeat: Infinity }}
-            className="absolute top-0 right-1/3 w-[600px] h-[600px] bg-emerald-500 rounded-full blur-[180px]" />
-          <div className="absolute inset-0 grid-pattern opacity-30" />
-        </div>
-        <div className="max-w-3xl mx-auto text-center relative">
-          <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/[0.08] border border-emerald-500/[0.12] mb-6">
-            <Calendar className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-xs font-medium text-emerald-400">Book Appointment</span>
+      <section className="relative pt-32 pb-10 px-6 overflow-hidden">
+        <HeroBackground />
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+          <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/[0.08] border border-blue-500/[0.15] mb-6">
+            <Calendar className="w-4 h-4 text-blue-400" />
+            <span className="text-sm text-blue-300">Book Appointment</span>
           </motion.div>
-          <motion.h1 initial="hidden" animate="visible" variants={fadeUp} custom={1}
-            className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-4 leading-[0.95]">
+          <motion.h1 initial="hidden" animate="visible" variants={fadeUp} custom={1} className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
             Schedule Your <span className="gradient-text">Visit</span>
           </motion.h1>
-          <motion.p initial="hidden" animate="visible" variants={fadeUp} custom={2}
-            className="text-white/35 max-w-lg mx-auto">
-            Book an appointment in minutes — no account needed. Choose your doctor, date, and time slot.
+          <motion.p initial="hidden" animate="visible" variants={fadeUp} custom={2} className="text-white/40 max-w-xl mx-auto">
+            Book with any doctor in seconds. Real-time availability, instant confirmation.
           </motion.p>
         </div>
       </section>
 
-      {/* Progress */}
-      <section className="px-6 pb-6">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center justify-between mb-2">
-            {steps.map((s, i) => (
-              <div key={s} className="flex items-center gap-2">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-semibold transition-all ${
-                  i < step ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : i === step ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20" : "bg-white/[0.04] text-white/25"
-                }`}>
-                  {i < step ? <CheckCircle2 className="w-4 h-4" /> : i + 1}
-                </div>
-                <span className={`text-xs hidden sm:inline ${i === step ? "text-white/60" : "text-white/20"}`}>{s}</span>
-                {i < steps.length - 1 && <div className={`w-8 sm:w-16 h-px mx-1 ${i < step ? "bg-emerald-500/40" : "bg-white/[0.04]"}`} />}
+      {/* Progress Steps */}
+      <section className="px-6 py-6">
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
+          {steps.map((s, i) => (
+            <div key={s.label} className="flex items-center gap-2">
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${i <= step ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white" : "bg-white/[0.05] text-white/20 border border-white/[0.08]"}`}>
+                {i < step ? <CheckCircle2 className="w-4 h-4" /> : <s.icon className="w-4 h-4" />}
               </div>
-            ))}
-          </div>
+              <span className={`text-xs font-medium hidden sm:block ${i <= step ? "text-white/70" : "text-white/20"}`}>{s.label}</span>
+              {i < steps.length - 1 && <div className={`w-8 sm:w-16 h-px mx-2 ${i < step ? "bg-gradient-to-r from-blue-500 to-cyan-500" : "bg-white/[0.06]"}`} />}
+            </div>
+          ))}
         </div>
       </section>
 
       {/* Form Steps */}
       <section className="px-6 pb-32">
         <div className="max-w-2xl mx-auto">
-          <AnimatePresence mode="wait">
-            {step === 0 && (
-              <motion.div key="s0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-                <h2 className="text-xl font-semibold mb-4">Select a Doctor</h2>
-                {doctors.map((doc) => (
-                  <button key={doc.id} onClick={() => { setSelectedDoctor(doc.id); setSelectedLocation(doc.locations[0]); }}
-                    className={`w-full text-left glass-card rounded-xl p-5 transition-all hover:bg-white/[0.04] ${selectedDoctor === doc.id ? "ring-1 ring-blue-500/40 bg-blue-500/[0.04]" : ""}`}>
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${doc.color} flex items-center justify-center shadow-lg`}>
-                        <Stethoscope className="w-6 h-6 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-white/70">{doc.name}</p>
-                        <p className="text-xs text-white/25">{doc.specialization}</p>
-                        <div className="flex gap-2 mt-1.5">
-                          {doc.locations.map(l => (
-                            <span key={l} className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.04] text-white/25">{l}</span>
-                          ))}
-                        </div>
-                      </div>
-                      {selectedDoctor === doc.id && <CheckCircle2 className="w-5 h-5 text-blue-400" />}
-                    </div>
-                  </button>
-                ))}
-                {doctor && doctor.locations.length > 1 && (
-                  <div className="mt-4">
-                    <label className="text-[10px] text-white/20 uppercase tracking-wider mb-2 block">Select Location</label>
-                    <div className="flex gap-3">
-                      {doctor.locations.map(l => (
-                        <button key={l} onClick={() => setSelectedLocation(l)}
-                          className={`flex-1 glass-card rounded-xl p-3 text-center text-sm transition-all ${selectedLocation === l ? "ring-1 ring-blue-500/40 bg-blue-500/[0.04] text-white/70" : "text-white/25 hover:bg-white/[0.04]"}`}>
-                          <MapPin className="w-4 h-4 mx-auto mb-1" />{l}
+          {error && (
+            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm mb-6">
+              <AlertCircle className="w-4 h-4 shrink-0" />{error}
+              <button onClick={() => setError("")} className="ml-auto text-red-400 hover:text-red-300">&times;</button>
+            </motion.div>
+          )}
+
+          <div className="glass-card rounded-2xl p-8 min-h-[340px]">
+            <AnimatePresence mode="wait">
+              {/* Step 0: Doctor */}
+              {step === 0 && (
+                <motion.div key="step0" variants={stepVariants} initial="enter" animate="center" exit="exit">
+                  <h3 className="text-lg font-bold mb-1">Select a Doctor</h3>
+                  <p className="text-sm text-white/30 mb-6">Choose your preferred physician.</p>
+                  {loadingDoctors ? (
+                    <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 text-blue-400 animate-spin" /></div>
+                  ) : (
+                    <div className="space-y-3">
+                      {doctors.map(d => (
+                        <button key={d.doctor_id} onClick={() => setForm(p => ({ ...p, doctor_id: d.doctor_id, doctorName: d.name }))}
+                          className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${form.doctor_id === d.doctor_id ? "border-blue-500/40 bg-blue-500/[0.06]" : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"}`}>
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center text-2xl shrink-0">👨‍⚕️</div>
+                          <div className="flex-1">
+                            <div className="font-semibold text-white/80">{d.name}</div>
+                            <div className="text-xs text-white/30">{d.specialization}</div>
+                          </div>
+                          <div className="flex gap-1.5">
+                            {d.locations.map(l => (
+                              <span key={l} className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] text-white/30 flex items-center gap-0.5">
+                                <MapPin className="w-2.5 h-2.5" />{l}
+                              </span>
+                            ))}
+                          </div>
+                          {form.doctor_id === d.doctor_id && <CheckCircle2 className="w-5 h-5 text-blue-400 shrink-0" />}
                         </button>
                       ))}
                     </div>
+                  )}
+                </motion.div>
+              )}
+
+              {/* Step 1: Date & Time */}
+              {step === 1 && (
+                <motion.div key="step1" variants={stepVariants} initial="enter" animate="center" exit="exit">
+                  <h3 className="text-lg font-bold mb-1">Pick Date & Time</h3>
+                  <p className="text-sm text-white/30 mb-6">Choose when you&apos;d like to visit.</p>
+                  <div className="mb-6">
+                    <label className="text-xs text-white/30 font-medium block mb-1.5">Date</label>
+                    <input type="date" min={today} value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value, time_slot: "" }))}
+                      className="w-full px-4 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm text-white focus:outline-none focus:border-blue-500/30 transition-colors [color-scheme:dark]" />
                   </div>
-                )}
-              </motion.div>
-            )}
-
-            {step === 1 && (
-              <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                <h2 className="text-xl font-semibold">Select Date & Time</h2>
-                <div>
-                  <label className="text-[10px] text-white/20 uppercase tracking-wider mb-2 block">Date</label>
-                  <input type="date" min={today} value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
-                    className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/30 [color-scheme:dark] transition" />
-                </div>
-                {selectedDate && (
-                  <div>
-                    <label className="text-[10px] text-white/20 uppercase tracking-wider mb-2 block">Available Slots</label>
-                    {loadingSlots ? (
-                      <div className="flex items-center gap-2 text-white/25 py-8 justify-center"><Loader2 className="w-4 h-4 animate-spin" /> Loading availability...</div>
-                    ) : slots.length > 0 ? (
-                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                        {slots.map(slot => (
-                          <button key={slot} onClick={() => setSelectedSlot(slot)}
-                            className={`rounded-xl p-3 text-sm text-center transition-all ${selectedSlot === slot ? "bg-blue-500/20 ring-1 ring-blue-500/40 text-blue-300" : "bg-white/[0.03] text-white/35 hover:bg-white/[0.06] border border-white/[0.04]"}`}>
-                            <Clock className="w-3.5 h-3.5 mx-auto mb-1" />{slot}
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center text-white/20 py-8 text-sm">No slots available. Try another date.</div>
-                    )}
-                  </div>
-                )}
-              </motion.div>
-            )}
-
-            {step === 2 && (
-              <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-5">
-                <h2 className="text-xl font-semibold">Your Details</h2>
-                <div>
-                  <label className="text-[10px] text-white/20 uppercase tracking-wider mb-1.5 block">Full Name *</label>
-                  <input type="text" required value={patientName} onChange={e => setPatientName(e.target.value)}
-                    className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3 text-sm text-white placeholder-white/15 focus:outline-none focus:border-blue-500/30 transition" placeholder="Your full name" />
-                </div>
-                <div>
-                  <label className="text-[10px] text-white/20 uppercase tracking-wider mb-1.5 block">Phone Number *</label>
-                  <input type="tel" required value={patientPhone} onChange={e => setPatientPhone(e.target.value)}
-                    className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3 text-sm text-white placeholder-white/15 focus:outline-none focus:border-blue-500/30 transition" placeholder="+92 300 0000000" />
-                </div>
-                <div>
-                  <label className="text-[10px] text-white/20 uppercase tracking-wider mb-1.5 block">Reason (Optional)</label>
-                  <textarea rows={3} value={reason} onChange={e => setReason(e.target.value)}
-                    className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3 text-sm text-white placeholder-white/15 focus:outline-none focus:border-blue-500/30 transition resize-none" placeholder="Brief description..." />
-                </div>
-              </motion.div>
-            )}
-
-            {step === 3 && (
-              <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-5">
-                <h2 className="text-xl font-semibold">Review & Confirm</h2>
-                <div className="glass-card rounded-xl p-6 space-y-4">
-                  {[
-                    ["Doctor", doctor?.name], ["Location", selectedLocation], ["Date", selectedDate],
-                    ["Time Slot", selectedSlot], ["Patient", patientName], ["Phone", patientPhone],
-                    ...(reason ? [["Reason", reason]] : []),
-                  ].map(([k, v]) => (
-                    <div key={k as string} className="flex justify-between text-sm border-b border-white/[0.03] pb-3 last:border-0 last:pb-0">
-                      <span className="text-white/30">{k}</span><span className="text-white/60 font-medium">{v}</span>
+                  {form.date && (
+                    <div>
+                      <label className="text-xs text-white/30 font-medium block mb-2">Available Slots</label>
+                      {loadingSlots ? (
+                        <div className="flex items-center justify-center py-10"><Loader2 className="w-5 h-5 text-blue-400 animate-spin" /></div>
+                      ) : slots.length === 0 ? (
+                        <p className="text-sm text-white/25 py-6 text-center">No slots available for this date.</p>
+                      ) : (
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-[200px] overflow-y-auto pr-1">
+                          {slots.map(s => (
+                            <button key={s} onClick={() => setForm(p => ({ ...p, time_slot: s }))}
+                              className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${form.time_slot === s ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white" : "bg-white/[0.03] border border-white/[0.06] text-white/50 hover:bg-white/[0.06]"}`}>
+                              <Clock className="w-3 h-3 inline mr-1" />{s}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-                {error && (
-                  <div className="flex items-center gap-2 text-red-400 text-sm bg-red-500/[0.06] rounded-xl p-3 border border-red-500/10">
-                    <AlertCircle className="w-4 h-4 shrink-0" /> {error}
+                  )}
+                </motion.div>
+              )}
+
+              {/* Step 2: Details */}
+              {step === 2 && (
+                <motion.div key="step2" variants={stepVariants} initial="enter" animate="center" exit="exit">
+                  <h3 className="text-lg font-bold mb-1">Your Details</h3>
+                  <p className="text-sm text-white/30 mb-6">We need a few details to confirm your booking.</p>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs text-white/30 font-medium block mb-1.5">Full Name *</label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                        <input type="text" required value={form.patient_name} onChange={e => setForm(p => ({ ...p, patient_name: e.target.value }))}
+                          className="w-full pl-9 pr-4 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500/30 transition-colors"
+                          placeholder="Your full name" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-white/30 font-medium block mb-1.5">Phone Number *</label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                        <input type="tel" required value={form.patient_phone} onChange={e => setForm(p => ({ ...p, patient_phone: e.target.value }))}
+                          className="w-full pl-9 pr-4 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500/30 transition-colors"
+                          placeholder="+92 300 ..." />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-white/30 font-medium block mb-1.5">Reason for Visit (optional)</label>
+                      <div className="relative">
+                        <FileText className="absolute left-3 top-3 w-4 h-4 text-white/20" />
+                        <textarea rows={3} value={form.reason} onChange={e => setForm(p => ({ ...p, reason: e.target.value }))}
+                          className="w-full pl-9 pr-4 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-blue-500/30 transition-colors resize-none"
+                          placeholder="Describe your symptoms or reason..." />
+                      </div>
+                    </div>
                   </div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                </motion.div>
+              )}
 
-          {error && step !== 3 && (
-            <div className="mt-4 flex items-center gap-2 text-red-400 text-sm bg-red-500/[0.06] rounded-xl p-3 border border-red-500/10">
-              <AlertCircle className="w-4 h-4 shrink-0" /> {error}
+              {/* Step 3: Confirm */}
+              {step === 3 && (
+                <motion.div key="step3" variants={stepVariants} initial="enter" animate="center" exit="exit">
+                  <h3 className="text-lg font-bold mb-1">Review & Confirm</h3>
+                  <p className="text-sm text-white/30 mb-6">Please verify your booking details.</p>
+                  <div className="space-y-3 mb-8">
+                    {[
+                      { label: "Doctor", value: form.doctorName, icon: Stethoscope },
+                      { label: "Date", value: form.date, icon: Calendar },
+                      { label: "Time", value: form.time_slot, icon: Clock },
+                      { label: "Patient", value: form.patient_name, icon: User },
+                      { label: "Phone", value: form.patient_phone, icon: Phone },
+                      ...(form.reason ? [{ label: "Reason", value: form.reason, icon: FileText }] : []),
+                    ].map(item => (
+                      <div key={item.label} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+                        <item.icon className="w-4 h-4 text-blue-400/50 shrink-0" />
+                        <span className="text-xs text-white/30 w-16 shrink-0">{item.label}</span>
+                        <span className="text-sm text-white/70">{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Navigation */}
+            <div className="flex justify-between mt-8 pt-6 border-t border-white/[0.05]">
+              <Button onClick={() => setStep(s => s - 1)} disabled={step === 0} variant="outline" className="border-white/[0.08] text-white/50 rounded-xl px-5 h-10 text-sm disabled:opacity-20">
+                <ArrowLeft className="w-4 h-4 mr-1.5" /> Back
+              </Button>
+              {step < 3 ? (
+                <Button onClick={() => setStep(s => s + 1)} disabled={!canNext()} className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl px-5 h-10 text-sm font-semibold disabled:opacity-30">
+                  Next <ArrowRight className="w-4 h-4 ml-1.5" />
+                </Button>
+              ) : (
+                <Button onClick={handleSubmit} disabled={submitting} className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl px-6 h-10 text-sm font-semibold disabled:opacity-50">
+                  {submitting ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> Booking...</> : <><CheckCircle2 className="w-4 h-4 mr-1.5" /> Confirm Booking</>}
+                </Button>
+              )}
             </div>
-          )}
-
-          {/* Navigation */}
-          <div className="flex items-center justify-between mt-8">
-            <Button variant="outline" onClick={() => setStep(s => s - 1)} disabled={step === 0}
-              className="border-white/[0.06] text-white/40 rounded-full px-6 h-11">
-              <ArrowLeft className="w-4 h-4 mr-2" /> Back
-            </Button>
-            {step < 3 ? (
-              <Button onClick={() => setStep(s => s + 1)} disabled={!canProceed()}
-                className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full px-6 h-11 font-semibold shadow-lg shadow-blue-500/20">
-                Continue <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            ) : (
-              <Button onClick={handleBook} disabled={booking}
-                className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full px-8 h-11 font-semibold shadow-lg shadow-emerald-500/20">
-                {booking ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Booking...</> : <>Confirm Booking <CheckCircle2 className="w-4 h-4 ml-2" /></>}
-              </Button>
-            )}
           </div>
         </div>
       </section>

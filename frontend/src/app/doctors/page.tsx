@@ -3,77 +3,64 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import {
-  Stethoscope, MapPin, Clock, Calendar, Phone, ArrowRight,
-  CheckCircle2, Star, Award, Globe, Users,
+  Stethoscope, MapPin, Calendar, Phone, Clock, ArrowRight,
+  CheckCircle2, Sparkles, Award, Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/public/navbar";
 import { Footer } from "@/components/public/footer";
+import { HeroBackground } from "@/components/public/animated-bg";
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 40 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.7, ease: [0.22, 1, 0.36, 1] } })
-};
-const scaleIn = {
-  hidden: { opacity: 0, scale: 0.92 },
-  visible: (i: number) => ({ opacity: 1, scale: 1, transition: { delay: i * 0.12, duration: 0.8, ease: [0.22, 1, 0.36, 1] } })
+  hidden: { opacity: 0, y: 30 },
+  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.08, duration: 0.6, ease: [0.22, 1, 0.36, 1] } })
 };
 
 const doctors = [
   {
     id: "DOC001", name: "Dr. Aleem Rehman", role: "Senior Physician & Founder",
-    img: "👨‍⚕️", color: "from-blue-500 to-cyan-500",
-    locations: ["Islamabad", "Multan"],
-    schedule: "Monday – Saturday, 3:00 PM – 12:00 AM",
-    bio: "Founder of Aleem Hospital and pioneer of AI-integrated healthcare in Pakistan. Dr. Aleem brings years of clinical experience combined with a vision for technology-driven patient care. Available across both branches.",
-    specialties: ["General Medicine", "Preventive Care", "AI-Integrated Diagnostics"],
-    education: "MBBS, FCPS — Board Certified",
+    specialization: "General Medicine", locations: ["Islamabad", "Multan"],
+    color: "from-blue-500 to-cyan-500",
+    bio: "Founding physician of Aleem Hospital with extensive experience in general medicine. Available at both Islamabad and Multan branches.",
+    specialties: ["General Medicine", "Internal Medicine", "Preventive Care", "Chronic Disease Management"],
+    schedule: "Mon-Sat • 3:00 PM - 12:00 AM",
   },
   {
     id: "DOC002", name: "Dr. Mohsin Khan", role: "General Physician",
-    img: "👨‍⚕️", color: "from-violet-500 to-purple-500",
-    locations: ["Islamabad"],
-    schedule: "Monday – Saturday, 3:00 PM – 12:00 AM",
-    bio: "Dedicated general physician at the Islamabad branch specializing in comprehensive patient care and chronic disease management. Works with the AI scheduling system for efficient appointment handling.",
-    specialties: ["General Medicine", "Chronic Disease Management", "Patient Wellness"],
-    education: "MBBS — General Practice",
+    specialization: "General Medicine", locations: ["Islamabad"],
+    color: "from-violet-500 to-purple-500",
+    bio: "Skilled general physician based at the Islamabad branch, specializing in patient care and health screenings.",
+    specialties: ["General Medicine", "Health Screenings", "Family Medicine", "Wellness Consultations"],
+    schedule: "Mon-Sat • 3:00 PM - 12:00 AM",
   },
   {
     id: "DOC003", name: "Dr. Zain Abbas", role: "General Physician",
-    img: "👨‍⚕️", color: "from-emerald-500 to-teal-500",
-    locations: ["Multan"],
-    schedule: "Monday – Saturday, 3:00 PM – 12:00 AM",
-    bio: "General physician leading patient care at the Multan branch. Dr. Zain focuses on preventive care and health screenings, supported by Aleem Hospital's AI-powered scheduling and EHR systems.",
-    specialties: ["General Medicine", "Health Screenings", "Preventive Care"],
-    education: "MBBS — General Practice",
+    specialization: "General Medicine", locations: ["Multan"],
+    color: "from-emerald-500 to-teal-500",
+    bio: "Dedicated physician at the Multan branch, focused on providing quality healthcare and patient education.",
+    specialties: ["General Medicine", "Patient Education", "Primary Care", "Preventive Medicine"],
+    schedule: "Mon-Sat • 3:00 PM - 12:00 AM",
   },
 ];
 
 export default function DoctorsPage() {
   return (
-    <div className="min-h-screen bg-[#060a14] text-white overflow-hidden">
+    <div className="min-h-screen bg-[#060a14] text-white">
       <Navbar />
 
       {/* Hero */}
-      <section className="relative pt-32 pb-20 px-6">
-        <div className="absolute inset-0 pointer-events-none">
-          <motion.div animate={{ scale: [1, 1.1, 1], opacity: [0.03, 0.05, 0.03] }} transition={{ duration: 10, repeat: Infinity }}
-            className="absolute top-0 right-1/3 w-[600px] h-[600px] bg-emerald-500 rounded-full blur-[180px]" />
-          <div className="absolute inset-0 grid-pattern opacity-30" />
-        </div>
-        <div className="max-w-4xl mx-auto text-center relative">
-          <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/[0.08] border border-emerald-500/[0.12] mb-6">
-            <Stethoscope className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-xs font-medium text-emerald-400">Medical Team</span>
+      <section className="relative pt-32 pb-16 px-6 overflow-hidden">
+        <HeroBackground />
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+          <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/[0.08] border border-emerald-500/[0.15] mb-6">
+            <Stethoscope className="w-4 h-4 text-emerald-400" />
+            <span className="text-sm text-emerald-300">Our Medical Team</span>
           </motion.div>
-          <motion.h1 initial="hidden" animate="visible" variants={fadeUp} custom={1}
-            className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 leading-[0.95]">
-            Our Expert <span className="gradient-text-emerald">Physicians</span>
+          <motion.h1 initial="hidden" animate="visible" variants={fadeUp} custom={1} className="text-5xl md:text-6xl font-bold tracking-tight mb-6">
+            Meet Our <span className="gradient-text">Doctors</span>
           </motion.h1>
-          <motion.p initial="hidden" animate="visible" variants={fadeUp} custom={2}
-            className="text-lg text-white/35 max-w-2xl mx-auto">
-            Three qualified physicians across Islamabad and Multan — supported by AI scheduling, real-time availability, and an intelligent EHR system.
+          <motion.p initial="hidden" animate="visible" variants={fadeUp} custom={2} className="text-lg text-white/40 max-w-2xl mx-auto">
+            Qualified physicians across Islamabad and Multan, supported by AI-powered scheduling and voice assistance.
           </motion.p>
         </div>
       </section>
@@ -82,64 +69,62 @@ export default function DoctorsPage() {
       <section className="py-10 px-6 pb-32">
         <div className="max-w-5xl mx-auto space-y-8">
           {doctors.map((doc, i) => (
-            <motion.div key={doc.id} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={scaleIn} custom={i}>
-              <div className="glass-card rounded-2xl overflow-hidden hover:bg-white/[0.03] transition-all group">
-                {/* Gradient header */}
-                <div className={`h-3 bg-gradient-to-r ${doc.color}`} />
-
-                <div className="p-8 grid md:grid-cols-[200px_1fr] gap-8">
-                  {/* Profile */}
-                  <div className="text-center md:text-left">
-                    <div className={`w-28 h-28 rounded-2xl bg-gradient-to-br ${doc.color} flex items-center justify-center mx-auto md:mx-0 text-5xl shadow-2xl mb-4`}>
-                      {doc.img}
+            <motion.div key={doc.id} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}>
+              <div className="glass-card rounded-2xl overflow-hidden hover:bg-white/[0.04] transition-all group">
+                <div className="grid md:grid-cols-3 gap-0">
+                  {/* Profile side */}
+                  <div className={`bg-gradient-to-br ${doc.color} p-8 flex flex-col items-center justify-center text-center relative overflow-hidden`}>
+                    <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIi8+PC9zdmc+')] opacity-30" />
+                    <motion.div animate={{ y: [-3, 3, -3] }} transition={{ duration: 4, repeat: Infinity }} className="relative">
+                      <div className="w-24 h-24 rounded-full bg-white/10 backdrop-blur flex items-center justify-center text-5xl mb-4 border-2 border-white/20">👨‍⚕️</div>
+                    </motion.div>
+                    <h3 className="text-xl font-bold text-white">{doc.name}</h3>
+                    <p className="text-white/70 text-sm mt-1">{doc.role}</p>
+                    <div className="flex items-center gap-1.5 mt-3">
+                      <div className="relative"><div className="w-2 h-2 bg-emerald-300 rounded-full" /><div className="absolute inset-0 w-2 h-2 bg-emerald-300 rounded-full animate-ping opacity-50" /></div>
+                      <span className="text-[11px] text-emerald-200 font-medium">Available Now</span>
                     </div>
-                    <div className="flex items-center justify-center md:justify-start gap-1.5 mb-2">
-                      <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                      <span className="text-[11px] text-emerald-400/60">Available</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 justify-center md:justify-start">
-                      {doc.locations.map((loc) => (
-                        <span key={loc} className="text-[10px] font-medium px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06] text-white/30 flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />{loc}
+                    <div className="flex gap-2 mt-4">
+                      {doc.locations.map(l => (
+                        <span key={l} className="text-[10px] px-2.5 py-1 rounded-full bg-white/15 text-white/80 flex items-center gap-1 font-medium">
+                          <MapPin className="w-3 h-3" />{l}
                         </span>
                       ))}
                     </div>
                   </div>
 
-                  {/* Info */}
-                  <div>
-                    <h2 className="text-2xl font-bold text-white mb-1">{doc.name}</h2>
-                    <p className="text-sm text-white/40 mb-1">{doc.role}</p>
-                    <p className="text-xs text-white/20 mb-4">{doc.education}</p>
-                    <p className="text-sm text-white/35 leading-relaxed mb-6">{doc.bio}</p>
-
-                    {/* Specialties */}
-                    <div className="mb-6">
-                      <p className="text-[10px] text-white/20 uppercase tracking-wider mb-2">Specialties</p>
-                      <div className="flex flex-wrap gap-2">
-                        {doc.specialties.map((s) => (
-                          <span key={s} className="text-xs px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.05] text-white/40">{s}</span>
-                        ))}
+                  {/* Details */}
+                  <div className="md:col-span-2 p-8">
+                    <p className="text-white/40 leading-relaxed mb-6">{doc.bio}</p>
+                    <div className="grid sm:grid-cols-2 gap-4 mb-6">
+                      <div>
+                        <h4 className="text-xs font-semibold text-white/30 uppercase tracking-wider mb-2">Specialties</h4>
+                        <div className="space-y-1.5">
+                          {doc.specialties.map(s => (
+                            <div key={s} className="flex items-center gap-2 text-sm text-white/50">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400/60 shrink-0" />{s}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-semibold text-white/30 uppercase tracking-wider mb-2">Schedule</h4>
+                        <div className="space-y-2 text-sm text-white/50">
+                          <div className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-blue-400/60" />{doc.schedule}</div>
+                          <div className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5 text-blue-400/60" />30-minute slots</div>
+                          <div className="flex items-center gap-2 text-white/30"><Clock className="w-3.5 h-3.5" />Break: 8 - 9 PM</div>
+                        </div>
                       </div>
                     </div>
-
-                    {/* Schedule */}
-                    <div className="flex items-center gap-2 text-sm text-white/30 mb-6">
-                      <Clock className="w-4 h-4 text-white/20" />
-                      <span>{doc.schedule}</span>
-                      <span className="text-white/15">• Break 8–9 PM</span>
-                    </div>
-
-                    {/* CTA */}
                     <div className="flex gap-3">
                       <Link href="/appointment">
-                        <Button className={`bg-gradient-to-r ${doc.color} text-white rounded-xl px-6 h-11 font-semibold shadow-lg`}>
-                          <Calendar className="w-4 h-4 mr-2" /> Book Appointment
+                        <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl px-5 h-10 text-sm font-semibold">
+                          <Calendar className="w-4 h-4 mr-1.5" /> Book Appointment
                         </Button>
                       </Link>
                       <Link href="/voice-call">
-                        <Button variant="outline" className="border-white/[0.08] bg-white/[0.03] text-white rounded-xl px-6 h-11">
-                          <Phone className="w-4 h-4 mr-2" /> Call AI
+                        <Button variant="outline" className="border-white/[0.08] text-white/60 rounded-xl px-5 h-10 text-sm">
+                          <Phone className="w-4 h-4 mr-1.5" /> Call AI
                         </Button>
                       </Link>
                     </div>
@@ -148,29 +133,6 @@ export default function DoctorsPage() {
               </div>
             </motion.div>
           ))}
-        </div>
-      </section>
-
-      {/* Quick Info */}
-      <section className="py-20 px-6 border-t border-white/[0.03]">
-        <div className="max-w-4xl mx-auto">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} className="grid md:grid-cols-3 gap-6">
-            {[
-              { icon: Clock, title: "Operating Hours", desc: "3:00 PM — 12:00 AM daily. Break 8–9 PM. 30-minute appointment slots.", color: "text-blue-400", bg: "bg-blue-500/10" },
-              { icon: Globe, title: "Two Locations", desc: "Islamabad and Multan branches connected by our unified AI scheduling network.", color: "text-emerald-400", bg: "bg-emerald-500/10" },
-              { icon: Phone, title: "AI Scheduling", desc: "Call our AI voice agent at +92 440-684-8838 or book online — no account needed.", color: "text-violet-400", bg: "bg-violet-500/10" },
-            ].map((item, i) => (
-              <motion.div key={item.title} variants={scaleIn} custom={i}>
-                <div className="glass-card rounded-xl p-6 text-center hover:bg-white/[0.04] transition-all h-full">
-                  <div className={`w-12 h-12 rounded-xl ${item.bg} flex items-center justify-center mx-auto mb-4`}>
-                    <item.icon className={`w-6 h-6 ${item.color}`} />
-                  </div>
-                  <h3 className="text-sm font-semibold text-white mb-2">{item.title}</h3>
-                  <p className="text-xs text-white/25 leading-relaxed">{item.desc}</p>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
         </div>
       </section>
 
